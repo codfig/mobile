@@ -74,15 +74,38 @@ Each language ships with generated example programs, some inside the grammar and
 some outside it. For an invalid program the goal inverts: the player has to fail
 to build the tree, and the learning is in discovering *where* it jams.
 
+## Stages of practice
+
+The game grows in stages, and what changes between them is how much of the tree
+the player builds by hand.
+
+**Stage 1 — build all of it.** Small to almost-medium trees, few languages, no
+automation. Every fork is hung by hand, including the dull chains like
+`E → T → F`: this is where the mechanic is learned, so nothing is done for the
+player. Languages: the counting grammars and arithmetic with precedence.
+
+**Stage 2 — decide what matters.** Bigger programs and more languages (LET, the
+small ALGOL). Each level comes with most of the tree already hung and leaves
+open only the decisions that teach something — where precedence splits an
+expression, which `if` a dangling `else` belongs to. The same program gets
+harder by leaving more of it open.
+
+Not in either stage yet: sealing a finished subtree into a single block, and
+hanging forced forks automatically.
+
 ## Platform
 
 Touch first, even though the first build runs in a browser.
 
-The eventual target is a small screen, and drag-from-toolbox-onto-a-precise-hook
-is a mouse gesture — on a phone the finger covers the target, and a deep tree
-needs vertical room a phone doesn't have. So the interaction is designed for
-touch from the start (likely tap-to-select a fork, tap-to-place it, with pan and
-zoom on the room), rather than built for the mouse and ported later.
+The eventual target is a small screen, so the interaction is designed for touch
+from the start rather than built for the mouse and ported later.
+
+Tap-to-select-then-tap-to-place was tried first and failed: nobody could find
+the gesture. What stayed is direct manipulation. A fork lands in the room
+touching nothing, and every part of it is dragged: the branch moves the whole
+fork, the ring moves only the ring, each hook moves only itself. Sibling hooks
+push each other away gently, only sideways, and never swap order. Snapping is
+just what happens when a piece is let go near a place that accepts it.
 
 ### Where it runs, eventually
 
