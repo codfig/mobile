@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { definir, lexar } from "./gramatica.js"
-import { ANBN, ARITMETICA, LISP, PARENTESES, TRILHAS } from "./niveis.js"
+import { ANBN, ARITMETICA, LET, LISP, PARENTESES, TRILHAS } from "./niveis.js"
 import { anulaveis, reconhece } from "./reconhecer.js"
 
 describe("definir", () => {
@@ -36,6 +36,12 @@ describe("lexar", () => {
     const comId = definir("x", "x", [["S", "id = num"]])
     expect(lexar(comId, "total = 3").map((t) => t.categoria)).toEqual(["id", "=", "num"])
     expect(lexar(ARITMETICA, "total").map((t) => t.categoria)).toEqual(["total"])
+  })
+
+  it("em LET, palavra-chave e literal, nao id; zero? tambem", () => {
+    expect(lexar(LET, "let x = 5 in zero? ( x )").map((t) => t.categoria)).toEqual([
+      "let", "id", "=", "num", "in", "zero?", "(", "id", ")"
+    ])
   })
 
   it("em Lisp, tudo o que nao e parentese e atomo", () => {
@@ -78,6 +84,13 @@ describe("reconhece (Earley)", () => {
     expect(cabe(LISP, "( ) )")).toBe(false)
   })
 
+  it("let: ligacao aninhada, e o if exige o else", () => {
+    expect(cabe(LET, "let x = 3 in let y = - ( x , 1 ) in - ( x , y )")).toBe(true)
+    expect(cabe(LET, "if zero? ( x ) then 0 else - ( x , 1 )")).toBe(true)
+    expect(cabe(LET, "if x then 1")).toBe(false)
+    expect(cabe(LET, "let x = in x")).toBe(false)
+  })
+
   it("o gabarito de cada sala confere com a resposta escrita a mao", () => {
     const esperado: Record<string, boolean> = {
       "anbn:a b": true,
@@ -110,7 +123,18 @@ describe("reconhece (Earley)", () => {
       "aritmetica:( 2 + 3 ) * 4": true,
       "aritmetica:2 + * 3": false,
       "aritmetica:( 1 + 2 ) * ( 3 + 4 )": true,
-      "aritmetica:( 2 + 3": false
+      "aritmetica:( 2 + 3": false,
+      "let:5": true,
+      "let:x": true,
+      "let:- ( x , 1 )": true,
+      "let:zero? ( x )": true,
+      "let:let x = 5 in x": true,
+      "let:- ( x 1 )": false,
+      "let:if zero? ( x ) then 0 else - ( x , 1 )": true,
+      "let:let x = in x": false,
+      "let:let x = 7 in let y = 2 in - ( x , y )": true,
+      "let:if x then 1": false,
+      "let:let x = 3 in let y = - ( x , 1 ) in - ( x , y )": true
     }
     const niveis = TRILHAS.flatMap((t) => t.niveis)
     expect(niveis.map((n) => n.id).sort()).toEqual(Object.keys(esperado).sort())

@@ -5,10 +5,12 @@ Construtor interativo de árvores de derivação. A ideia está em
 
 ## O que já roda
 
-Quatro gramáticas, cada uma com sua sala de programas: `aⁿbⁿ`, parênteses
-balanceados, expressões-S de Lisp (`S → atom | ( L )`, `L → ε | S L`) e
+Cinco gramáticas, cada uma com sua sala de programas: `aⁿbⁿ`, parênteses
+balanceados, expressões-S de Lisp (`S → atom | ( L )`, `L → ε | S L`),
 aritmética com precedência (`E → E + T | T`, `T → T * F | F`,
-`F → ( E ) | num`). Alguns programas estão fora da gramática, sem aviso.
+`F → ( E ) | num`) e LET, de Friedman & Wand (`num`, `id`, `- ( E , E )`,
+`zero? ( E )`, `if E then E else E`, `let id = E in E`). Alguns programas estão
+fora da gramática, sem aviso.
 
 Um garfo chega solto na sala. O ramo arrasta o que o garfo tem de solto, sem
 desfazer encaixe; o anel arrasta só o anel, cada ponta arrasta só ela; pontas

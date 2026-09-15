@@ -54,6 +54,22 @@ export const ARITMETICA = definir("aritmetica", "Aritmética", [
 ])
 
 /**
+ * LET, a primeira linguagem de Friedman & Wand, *Essentials of Programming
+ * Languages*. Um não-terminal só, então não há cadeias como `E → T → F`: a
+ * lição é a estrutura. E a de ligação aparece nas peças: o nome depois de `let`
+ * é uma folha do próprio garfo `let` (quem liga), enquanto um nome usado numa
+ * expressão é um garfo `E → id` inteiro (quem é ligado).
+ */
+export const LET = definir("let", "LET", [
+  ["E", "num"],
+  ["E", "id"],
+  ["E", "- ( E , E )"],
+  ["E", "zero? ( E )"],
+  ["E", "if E then E else E"],
+  ["E", "let id = E in E"]
+])
+
+/**
  * As salas. Os programas fora da gramática ficam misturados aos outros, sem
  * marca: descobrir que um deles não pendura faz parte do exercício.
  */
@@ -83,5 +99,18 @@ export const TRILHAS: ReadonlyArray<Trilha> = [
     "2 + * 3",
     "( 1 + 2 ) * ( 3 + 4 )",
     "( 2 + 3"
+  ]),
+  trilha(LET, [
+    "5",
+    "x",
+    "- ( x , 1 )",
+    "zero? ( x )",
+    "let x = 5 in x",
+    "- ( x 1 )",
+    "if zero? ( x ) then 0 else - ( x , 1 )",
+    "let x = in x",
+    "let x = 7 in let y = 2 in - ( x , y )",
+    "if x then 1",
+    "let x = 3 in let y = - ( x , 1 ) in - ( x , y )"
   ])
 ]

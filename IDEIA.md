@@ -63,7 +63,13 @@ which is the whole point, and is worth protecting as the grammars get bigger.
    student can't already see in the source text.
 
 4. **LET**, the first language in Friedman & Wand's *Essentials of Programming
-   Languages* (3rd ed.). Small, real, and has binding structure.
+   Languages* (3rd ed.). Small, real, and has binding structure. With a single
+   non-terminal there are no dull chains, and binding shows up in the pieces
+   themselves: the name after `let` is a leaf of the `let` fork (the binder),
+   while a name used inside an expression is a whole `E → id` fork (a bound
+   occurrence). Its programs are long in tokens, though — the nested `let`
+   rooms are 16 and 21 tokens wide — so on a phone they need zoom, which is
+   one more reason it belongs to stage 2.
 
 5. **A small ALGOL**, possibly with C's concrete syntax. Statement nesting, and
    eventually the dangling `else` — where one token stream hangs two different

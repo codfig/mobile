@@ -16,7 +16,7 @@ import {
   type Parte,
   type Veredito
 } from "./mundo.js"
-import { TRILHAS } from "./niveis.js"
+import { ARITMETICA, TRILHAS } from "./niveis.js"
 import { derivar } from "./reconhecer.js"
 import { Sala } from "./Sala.jsx"
 
@@ -86,7 +86,8 @@ const MiniGarfo = ({ gramatica, regra }: { gramatica: Gramatica; regra: Regra })
 }
 
 export const App = () => {
-  const [iTrilha, setITrilha] = useState(TRILHAS.length - 1)
+  // abre em 2 + 3 * 4, da aritmética
+  const [iTrilha, setITrilha] = useState(Math.max(0, TRILHAS.findIndex((t) => t.gramatica === ARITMETICA)))
   const [iNivel, setINivel] = useState(3)
   const [mundo, setMundo] = useState<Mundo>(mundoVazio)
   const [camera, setCamera] = useState<Camera | null>(null)
