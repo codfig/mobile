@@ -90,7 +90,19 @@ open only the decisions that teach something — where precedence splits an
 expression, which `if` a dangling `else` belongs to. The same program gets
 harder by leaving more of it open.
 
-Not in either stage yet: sealing a finished subtree into a single block, and
+**Later — grammars written in BNF.** Someone (the teacher, or the player)
+writes a grammar in BNF, and writing it produces its fork set: one fork per
+production, one hook shape per non-terminal, one tag per token category. Any
+program can then be checked against it, so new rooms come from new grammars
+rather than new code.
+
+The code already leans that way. A grammar is plain data built from
+BNF-shaped lines (`E → E + T`), and whether a program can be hung is decided by
+a general parser (Earley) that accepts any context-free grammar as written —
+left recursion, ε and ambiguity included. What is left for that increment is
+the BNF text editor and its error messages.
+
+Not in any stage yet: sealing a finished subtree into a single block, and
 hanging forced forks automatically.
 
 ## Platform

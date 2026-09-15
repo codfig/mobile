@@ -5,16 +5,18 @@ Construtor interativo de árvores de derivação. A ideia está em
 
 ## O que já roda
 
-O nível `aⁿbⁿ`, com a gramática `S → a S b | ε`.
+Três gramáticas, cada uma com sua sala de programas: `aⁿbⁿ`, parênteses
+balanceados e aritmética com precedência (`E → E + T | T`, `T → T * F | F`,
+`F → ( E ) | num`). Alguns programas estão fora da gramática, sem aviso.
 
-Você escolhe um garfo na bandeja e toca num gancho livre para pendurá-lo. As
-folhas descem até os tokens do chão; o ε pousa na fresta entre dois tokens. Um
-gancho livre mostra, por uma linha pontilhada no chão, o trecho que ainda falta
-cobrir. Tocar num garfo já pendurado solta ele e a subárvore inteira.
+Um garfo chega solto na sala. O ramo arrasta o garfo inteiro, o anel arrasta só
+o anel, cada ponta arrasta só ela; pontas irmãs se afastam de leve e não trocam
+de ordem. Um anel só encaixa num gancho da mesma forma, e uma ponta terminal só
+num token da mesma categoria. Um dedo no vazio passeia pela sala, dois dedos
+aproximam.
 
-Dois botões, como decidido em IDEIA.md: **Verificar** (não há correção
-contínua) e **Não dá para pendurar**, para os programas que estão fora da
-gramática.
+**Verificar** confere a árvore; **Não dá para pendurar** é para os programas de
+fora — o gabarito sai de um reconhecedor, não de marca escrita à mão.
 
 ## Uso
 
@@ -33,19 +35,19 @@ O servidor sobe em `0.0.0.0`, então o terminal imprime um endereço
 
 ```
 src/
-  gramatica.ts   as duas regras de aⁿbⁿ e os programas de exemplo
-  arvore.ts      a árvore pendurada: pendurar, soltar, colher, verificar
-  layout.ts      onde cada peça fica na sala
-  Sala.tsx       o desenho (SVG)
-  App.tsx        bandeja, botões e estado da partida
+  gramatica.ts   gramática como dado, a partir de linhas quase BNF; lexar
+  reconhecer.ts  reconhecedor de Earley: o programa pertence à gramática?
+  niveis.ts      as três gramáticas e os programas de cada sala
+  mundo.ts       garfos soltos: mover, repelir, encaixar, verificar
+  layout.ts      medidas da sala, pontos fixos e a câmera
+  Formas.tsx     forma de cada não-terminal, etiquetas de terminal e token
+  Sala.tsx       o desenho e os gestos (arrasto, passeio, pinça, roda)
+  App.tsx        trilhas, salas, bandeja e botões
 ```
 
-Nada é genérico de propósito: não há formato de arquivo de gramática nem editor
-de níveis. O protótipo existe para responder uma pergunta só — pendurar garfo é
-gostoso ou é chato?
-
-`arvore.ts` e `layout.ts` são funções puras, sem DOM e sem API de Node, então
-rodam igual no navegador, no vitest e num Worker.
+`gramatica.ts`, `reconhecer.ts`, `mundo.ts` e `layout.ts` são funções puras,
+sem DOM e sem API de Node, então rodam igual no navegador, no vitest e num
+Worker.
 
 ## Ainda não
 
@@ -55,5 +57,4 @@ vindos de algum lugar, progresso salvo, rede. Pelo mesmo motivo não há nada de
 Cloudflare ainda.
 
 Também não tem: construção de baixo para cima (a resposta à pergunta 3 foi "por
-que não os dois?"), categorias de token além de `a` e `b`, nem os outros níveis
-da rampa.
+que não os dois?"), LET e o ALGOL pequeno, nem o editor de gramática em BNF.

@@ -1,4 +1,4 @@
-import { regraPorId, type Categoria } from "./gramatica.js"
+import { regraDe, type Gramatica, type Regra, type Token } from "./gramatica.js"
 import { dist, type Cena, type Ponto } from "./layout.js"
 
 /**
@@ -35,13 +35,12 @@ export type Parte = { readonly _tag: "Corpo" } | { readonly _tag: "Anel" } | { r
 export const mundoVazio: Mundo = { garfos: [] }
 
 let seq = 0
-export const novoGarfo = (regraId: string, onde: Ponto): Garfo => {
-  const regra = regraPorId(regraId)
-  const corpo = regra?.corpo ?? []
+export const novoGarfo = (regra: Regra, onde: Ponto): Garfo => {
+  const corpo = regra.corpo
   const vao = 54 * Math.max(corpo.length - 1, 0)
   return {
     id: `g${++seq}`,
-    regra: regraId,
+    regra: regra.id,
     anel: onde,
     pontas: corpo.map((_, i) => ({ x: onde.x - vao / 2 + i * 54, y: onde.y + 66 })),
     anelEm: null,
@@ -232,28 +231,35 @@ const encaixesOcupados = (mundo: Mundo): ReadonlySet<string> => {
   return s
 }
 
-/** Os ganchos que aceitam um anel agora: o do teto e as pontas não-terminais vagas. */
+/**
+ * Os ganchos vagos: o do teto e as pontas não-terminais sem ninguém pendurado.
+ * Com `aceita`, só os ganchos daquele não-terminal — um anel `F` não entra num
+ * gancho `E`, do mesmo jeito que a forma dele não cabe.
+ */
 export const encaixesLivres = (
+  gram: Gramatica,
   mundo: Mundo,
   c: Cena,
-  semEstes: ReadonlySet<string> = new Set()
-): ReadonlyArray<{ readonly alvo: Encaixe; readonly p: Ponto }> => {
+  semEstes: ReadonlySet<string> = new Set(),
+  aceita?: string
+): ReadonlyArray<{ readonly alvo: Encaixe; readonly p: Ponto; readonly nome: string }> => {
   const ocupados = encaixesOcupados(mundo)
-  const saida: Array<{ alvo: Encaixe; p: Ponto }> = []
-  if (!ocupados.has("teto")) saida.push({ alvo: { _tag: "Teto" }, p: c.teto })
+  const saida: Array<{ alvo: Encaixe; p: Ponto; nome: string }> = []
+  if (!ocupados.has("teto")) saida.push({ alvo: { _tag: "Teto" }, p: c.teto, nome: gram.inicio })
   for (const g of mundo.garfos) {
     if (semEstes.has(g.id)) continue
-    const regra = regraPorId(g.regra)
+    const regra = regraDe(gram, g.regra)
     if (regra === undefined) continue
     regra.corpo.forEach((s, i) => {
       if (s.tipo !== "naoTerminal" || ocupados.has(`${g.id}:${i}`)) return
-      saida.push({ alvo: { _tag: "Ponta", garfo: g.id, i }, p: posPonta(mundo, c, g, i) })
+      saida.push({ alvo: { _tag: "Ponta", garfo: g.id, i }, p: posPonta(mundo, c, g, i), nome: s.nome })
     })
   }
-  return saida
+  return aceita === undefined ? saida : saida.filter((e) => e.nome === aceita)
 }
 
-export const tokensLivres = (mundo: Mundo): ReadonlySet<number> => {
+/** Os tokens que já têm uma ponta presa neles. */
+export const tokensOcupados = (mundo: Mundo): ReadonlySet<number> => {
   const usados = new Set<number>()
   for (const g of mundo.garfos) {
     for (const preso of g.pontasEm) if (preso?._tag === "Token") usados.add(preso.i)
@@ -261,28 +267,37 @@ export const tokensLivres = (mundo: Mundo): ReadonlySet<number> => {
   return usados
 }
 
-export const simboloDaPonta = (g: Garfo, i: number) => regraPorId(g.regra)?.corpo[i]
+export const simboloDaPonta = (gram: Gramatica, g: Garfo, i: number) => regraDe(gram, g.regra)?.corpo[i]
 
 /**
  * Tenta encaixar a peça recém-largada. Uma ponta terminal só entra num token
  * da mesma categoria — a peça errada não encaixa, e é isso que dá o retorno,
  * sem precisar de mensagem de erro.
  */
-export const encaixar = (mundo: Mundo, c: Cena, tokens: ReadonlyArray<Categoria>, id: string, parte: Parte): Mundo => {
+export const encaixar = (
+  gram: Gramatica,
+  mundo: Mundo,
+  c: Cena,
+  tokens: ReadonlyArray<Token>,
+  id: string,
+  parte: Parte
+): Mundo => {
   const g = achar(mundo, id)
   if (g === undefined || parte._tag === "Corpo") return mundo
   const aqui = posDaParte(mundo, c, g, parte)
 
   if (parte._tag === "Anel") {
+    const regra = regraDe(gram, g.regra)
+    if (regra === undefined) return mundo
     let melhor: { alvo: Encaixe; d: number } | null = null
-    for (const { alvo, p } of encaixesLivres(mundo, c, pendentes(mundo, id))) {
+    for (const { alvo, p } of encaixesLivres(gram, mundo, c, pendentes(mundo, id), regra.cabeca)) {
       const d = dist(aqui, p)
       if (d <= RAIO && (melhor === null || d < melhor.d)) melhor = { alvo, d }
     }
     return melhor === null ? mundo : trocar(mundo, id, (x) => ({ ...x, anelEm: melhor.alvo }))
   }
 
-  const simbolo = simboloDaPonta(g, parte.i)
+  const simbolo = simboloDaPonta(gram, g, parte.i)
   if (simbolo === undefined || simbolo.tipo === "naoTerminal") return mundo
 
   if (simbolo.tipo === "vazio") {
@@ -299,10 +314,10 @@ export const encaixar = (mundo: Mundo, c: Cena, tokens: ReadonlyArray<Categoria>
         }))
   }
 
-  const usados = tokensLivres(mundo)
+  const usados = tokensOcupados(mundo)
   let melhor: { i: number; d: number } | null = null
   for (let i = 0; i < c.nTokens; i++) {
-    if (usados.has(i) || tokens[i] !== simbolo.categoria) continue
+    if (usados.has(i) || tokens[i]?.categoria !== simbolo.categoria) continue
     const d = dist(aqui, c.token(i))
     if (d <= RAIO && (melhor === null || d < melhor.d)) melhor = { i, d }
   }
@@ -325,7 +340,7 @@ export type Veredito =
   | { readonly _tag: "FrestaErrada"; readonly esperada: number; readonly encontrada: number }
   | { readonly _tag: "Certo" }
 
-export const verificar = (mundo: Mundo, tokens: ReadonlyArray<Categoria>): Veredito => {
+export const verificar = (gram: Gramatica, mundo: Mundo, tokens: ReadonlyArray<Token>): Veredito => {
   const raiz = mundo.garfos.find((g) => g.anelEm?._tag === "Teto")
   if (raiz === undefined) return { _tag: "SemRaiz" }
 
@@ -336,7 +351,7 @@ export const verificar = (mundo: Mundo, tokens: ReadonlyArray<Categoria>): Vered
 
   const andar = (g: Garfo, prof: number): void => {
     if (prof > 64) return
-    const regra = regraPorId(g.regra)
+    const regra = regraDe(gram, g.regra)
     if (regra === undefined) return
     regra.corpo.forEach((s, i) => {
       if (s.tipo === "naoTerminal") {

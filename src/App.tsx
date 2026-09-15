@@ -1,122 +1,165 @@
-import { useMemo, useRef, useState } from "react"
-import { NIVEIS, REGRAS } from "./gramatica.js"
-import { cenaDe, medidas, type Ponto } from "./layout.js"
-import {
-  encaixar,
-  mover,
-  mundoVazio,
-  novoGarfo,
-  por,
-  tirar,
-  verificar,
-  type Mundo,
-  type Parte,
-  type Veredito
-} from "./mundo.js"
-import { Forma, Sala } from "./Sala.jsx"
+import { useCallback, useMemo, useRef, useState } from "react"
+import { textoDoSimbolo, type Gramatica, type Regra } from "./gramatica.js"
+import { Etiqueta, NaoTerminal } from "./Formas.jsx"
+import { cenaDe, medidas, type Camera, type Ponto } from "./layout.js"
+import { encaixar, mover, mundoVazio, novoGarfo, por, tirar, verificar, type Mundo, type Parte, type Veredito } from "./mundo.js"
+import { TRILHAS } from "./niveis.js"
+import { Sala } from "./Sala.jsx"
 
 type Recado = { readonly tom: "bom" | "ruim" | "neutro"; readonly texto: string }
+
+const plural = (n: number, um: string, varios: string) => (n === 1 ? um : varios)
 
 const recadoDoVeredito = (v: Veredito): Recado => {
   switch (v._tag) {
     case "SemRaiz":
       return { tom: "neutro", texto: "Nada pendurado no gancho do teto ainda." }
     case "GanchoVazio":
-      return { tom: "neutro", texto: `Faltam ${v.quantos} gancho${v.quantos > 1 ? "s" : ""} por preencher.` }
+      return { tom: "neutro", texto: `Faltam ${v.quantos} ${plural(v.quantos, "gancho", "ganchos")} por preencher.` }
     case "PontaSolta":
-      return { tom: "neutro", texto: `${v.quantos} ponta${v.quantos > 1 ? "s" : ""} ainda não alcança o chão.` }
+      return { tom: "neutro", texto: `${v.quantos} ${plural(v.quantos, "ponta ainda não alcança", "pontas ainda não alcançam")} o chão.` }
     case "Cruzado":
       return { tom: "ruim", texto: "Os ramos se cruzam: a ordem da árvore não é a ordem do chão." }
     case "TokenLivre":
-      return { tom: "ruim", texto: `Sobra${v.quantos > 1 ? "m" : ""} ${v.quantos} token${v.quantos > 1 ? "s" : ""} sem ninguém.` }
+      return { tom: "ruim", texto: `${plural(v.quantos, "Sobra", "Sobram")} ${v.quantos} ${plural(v.quantos, "token", "tokens")} sem ninguém.` }
     case "FrestaErrada":
-      return { tom: "ruim", texto: `O ε pousou na fresta ${v.encontrada}, mas o lugar dele é a fresta ${v.esperada}.` }
+      return { tom: "ruim", texto: `Um ε pousou na fresta ${v.encontrada}, mas o lugar dele é a fresta ${v.esperada}.` }
     case "Certo":
       return { tom: "bom", texto: "Pendurada. A colheita bate com o chão, na ordem." }
   }
 }
 
+/** A gramática como se escreve no quadro: uma linha por não-terminal. */
+const linhasDaGramatica = (g: Gramatica): ReadonlyArray<string> =>
+  g.naoTerminais.map(
+    (nt) =>
+      `${nt} → ${g.regras
+        .filter((r) => r.cabeca === nt)
+        .map((r) => r.corpo.map(textoDoSimbolo).join(" "))
+        .join("  |  ")}`
+  )
+
+const MiniGarfo = ({ gramatica, regra }: { gramatica: Gramatica; regra: Regra }) => {
+  const n = regra.corpo.length
+  const passo = 30
+  const largura = Math.max(84, (n - 1) * passo + 44)
+  const cx = largura / 2
+  const indice = (nome: string) => Math.max(0, gramatica.naoTerminais.indexOf(nome))
+  return (
+    <svg viewBox={`0 0 ${largura} 60`} width={largura} height={60} className="miniatura" aria-hidden="true">
+      {regra.corpo.map((s, i) => {
+        const x = cx + (i - (n - 1) / 2) * passo
+        return <line key={`l${i}`} x1={cx} y1={15} x2={x} y2={42} className={s.tipo === "vazio" ? "ramo vazio" : "ramo"} />
+      })}
+      {regra.corpo.map((s, i) => {
+        const x = cx + (i - (n - 1) / 2) * passo
+        return s.tipo === "naoTerminal" ? (
+          <NaoTerminal key={`p${i}`} indice={indice(s.nome)} nome={s.nome} x={x} y={44} r={8} classe="peca livre" classeRotulo="rotulo-mini" />
+        ) : s.tipo === "vazio" ? (
+          <text key={`p${i}`} x={x} y={52} className="epsilon">
+            ε
+          </text>
+        ) : (
+          <Etiqueta key={`p${i}`} texto={s.categoria} x={x} y={44} altura={16} porLetra={6} classe="terminal" classeTexto="rotulo-mini claro" />
+        )
+      })}
+      <NaoTerminal indice={indice(regra.cabeca)} nome={regra.cabeca} x={cx} y={15} r={8} classe="anel" classeRotulo="rotulo-mini" />
+    </svg>
+  )
+}
+
 export const App = () => {
-  const [iNivel, setINivel] = useState(0)
+  const [iTrilha, setITrilha] = useState(TRILHAS.length - 1)
+  const [iNivel, setINivel] = useState(3)
   const [mundo, setMundo] = useState<Mundo>(mundoVazio)
+  const [camera, setCamera] = useState<Camera | null>(null)
   const [recado, setRecado] = useState<Recado | null>(null)
 
-  const nivel = NIVEIS[iNivel] ?? NIVEIS[0]!
+  const trilha = TRILHAS[iTrilha] ?? TRILHAS[0]!
+  const gramatica = trilha.gramatica
+  const nivel = trilha.niveis[iNivel] ?? trilha.niveis[0]!
   const m = useMemo(() => medidas(nivel.tokens.length), [nivel])
   const cena = useMemo(() => cenaDe(m, nivel.tokens.length), [m, nivel])
 
-  const recomecar = (i = iNivel) => {
-    setINivel(i)
+  const irPara = (t: number, n: number) => {
+    setITrilha(t)
+    setINivel(n)
     setMundo(mundoVazio)
+    setCamera(null)
     setRecado(null)
   }
 
-  const trazer = (regraId: string) => {
-    // Chega solto, sem contato, num lugar vazio perto do teto.
-    const onde: Ponto = { x: m.largura / 2 + (mundo.garfos.length % 3) * 34 - 34, y: m.tetoY + 96 }
-    setMundo((w) => por(w, novoGarfo(regraId, onde)))
+  const trazer = (regra: Regra) => {
+    // O garfo chega solto, perto do alto do que está na tela agora.
+    const base: Ponto =
+      camera === null
+        ? { x: m.largura / 2, y: m.tetoY + 96 }
+        : { x: camera.x + camera.w / camera.escala / 2, y: camera.y + (camera.h / camera.escala) * 0.3 }
+    const desvio = ((mundo.garfos.length % 5) - 2) * 26
+    setMundo((w) => por(w, novoGarfo(regra, { x: base.x + desvio, y: base.y + Math.abs(desvio) * 0.4 })))
     setRecado(null)
   }
 
   // Todo arrasto é calculado a partir do mundo de quando ele começou.
   const inicioDoArrasto = useRef<Mundo | null>(null)
-
   const aoMover = (garfo: string, parte: Parte, p: Ponto) =>
     setMundo((w) => {
       if (inicioDoArrasto.current === null) inicioDoArrasto.current = w
       return mover(inicioDoArrasto.current, cena, garfo, parte, p)
     })
-
   const aoSoltar = (garfo: string, parte: Parte) => {
     inicioDoArrasto.current = null
-    setMundo((w) => encaixar(w, cena, nivel.tokens, garfo, parte))
+    setMundo((w) => encaixar(gramatica, w, cena, nivel.tokens, garfo, parte))
   }
+  const aoMudarCamera = useCallback((c: Camera) => setCamera(c), [])
 
   return (
     <main className="app">
       <header>
         <h1>Pendura a árvore</h1>
-        <p className="gramatica">S → a S b &nbsp;|&nbsp; ε</p>
       </header>
 
-      <nav className="niveis" aria-label="Programa">
-        {NIVEIS.map((n, i) => (
-          <button key={n.id} type="button" className={i === iNivel ? "chip ativo" : "chip"} onClick={() => recomecar(i)}>
-            {n.tokens.join(" ")}
+      <nav className="trilhas" aria-label="Gramática">
+        {TRILHAS.map((t, i) => (
+          <button key={t.gramatica.id} type="button" className={i === iTrilha ? "chip ativo" : "chip"} onClick={() => irPara(i, 0)}>
+            {t.gramatica.nome}
           </button>
         ))}
       </nav>
 
-      <p className="dica">
-        Arraste o <strong>anel</strong> até um gancho, e cada <strong>ponta</strong> até o token dela — as vizinhas
-        se afastam de leve, sem trocar de ordem. Arraste o <strong>ramo</strong> para mover o garfo inteiro.
-      </p>
+      <pre className="gramatica">{linhasDaGramatica(gramatica).join("\n")}</pre>
 
-      <Sala mundo={mundo} cena={cena} m={m} tokens={nivel.tokens} aoMover={aoMover} aoSoltar={aoSoltar} />
+      <nav className="niveis" aria-label="Programa">
+        {trilha.niveis.map((n, i) => (
+          <button key={n.id} type="button" className={i === iNivel ? "chip programa ativo" : "chip programa"} onClick={() => irPara(iTrilha, i)}>
+            {n.programa}
+          </button>
+        ))}
+      </nav>
+
+      <Sala
+        gramatica={gramatica}
+        mundo={mundo}
+        cena={cena}
+        m={m}
+        tokens={nivel.tokens}
+        camera={camera}
+        aoMudarCamera={aoMudarCamera}
+        aoMover={aoMover}
+        aoSoltar={aoSoltar}
+      />
+
+      <p className="dica">
+        Arraste o <strong>anel</strong> até um gancho da mesma forma, e cada <strong>ponta</strong> até o token dela. O{" "}
+        <strong>ramo</strong> move o garfo inteiro. Um dedo no vazio passeia pela sala; dois dedos aproximam.
+      </p>
 
       <section className="bandeja-caixa" aria-label="Bandeja de garfos">
         <p className="etiqueta">Bandeja — toque para trazer um garfo</p>
         <div className="bandeja">
-          {REGRAS.map((r) => (
-            <button key={r.id} type="button" className="garfo" onClick={() => trazer(r.id)}>
-              <svg viewBox="0 0 90 56" className="miniatura" aria-hidden="true">
-                <circle cx={45} cy={14} r={7} className="anel" />
-                {r.id === "r1" ? (
-                  <>
-                    <line x1={45} y1={14} x2={18} y2={42} className="ramo" />
-                    <line x1={45} y1={14} x2={45} y2={42} className="ramo" />
-                    <line x1={45} y1={14} x2={72} y2={42} className="ramo" />
-                    <Forma tipo="a" x={18} y={42} r={7} classe="peca folha" />
-                    <Forma tipo="naoTerminal" x={45} y={42} r={7} classe="peca livre" />
-                    <Forma tipo="b" x={72} y={42} r={7} classe="peca folha" />
-                  </>
-                ) : (
-                  <>
-                    <line x1={45} y1={14} x2={45} y2={38} className="ramo vazio" />
-                    <text x={45} y={48} className="epsilon">ε</text>
-                  </>
-                )}
-              </svg>
+          {gramatica.regras.map((r) => (
+            <button key={r.id} type="button" className="garfo" onClick={() => trazer(r)}>
+              <MiniGarfo gramatica={gramatica} regra={r} />
               <span>{r.rotulo}</span>
             </button>
           ))}
@@ -126,7 +169,7 @@ export const App = () => {
       {recado !== null && <p className={`recado ${recado.tom}`}>{recado.texto}</p>}
 
       <section className="acoes">
-        <button type="button" className="principal" onClick={() => setRecado(recadoDoVeredito(verificar(mundo, nivel.tokens)))}>
+        <button type="button" className="principal" onClick={() => setRecado(recadoDoVeredito(verificar(gramatica, mundo, nivel.tokens)))}>
           Verificar
         </button>
         <button
@@ -145,18 +188,19 @@ export const App = () => {
         <button
           type="button"
           className="secundaria"
+          disabled={mundo.garfos.length === 0}
           onClick={() => {
             const ultimo = mundo.garfos[mundo.garfos.length - 1]
             if (ultimo !== undefined) setMundo((w) => tirar(w, ultimo.id))
           }}
-          disabled={mundo.garfos.length === 0}
         >
           Tirar o último
         </button>
-        <button type="button" className="secundaria" onClick={() => recomecar()} disabled={mundo.garfos.length === 0}>
+        <button type="button" className="secundaria" disabled={mundo.garfos.length === 0} onClick={() => irPara(iTrilha, iNivel)}>
           Recomeçar
         </button>
       </section>
     </main>
   )
 }
+

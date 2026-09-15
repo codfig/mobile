@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { NIVEIS } from "./gramatica.js"
+import { lexar, regraDe } from "./gramatica.js"
+import { ANBN, ARITMETICA } from "./niveis.js"
 import { cenaDe, medidas } from "./layout.js"
 import {
   encaixar,
@@ -14,19 +15,20 @@ import {
   type Mundo
 } from "./mundo.js"
 
-const tokens = ["a", "a", "b", "b"] as const
+const tokens = lexar(ANBN, "a a b b")
+const R = { r1: regraDe(ANBN, "S → a S b")!, r2: regraDe(ANBN, "S → ε")! }
 const m = medidas(tokens.length)
 const c = cenaDe(m, tokens.length)
 
 /** Traz um garfo e devolve o mundo novo junto com o id dele. */
-const trazer = (w: Mundo, regra: string) => {
-  const g = novoGarfo(regra, { x: m.largura / 2, y: 120 })
+const trazer = (w: Mundo, regra: keyof typeof R) => {
+  const g = novoGarfo(R[regra], { x: m.largura / 2, y: 120 })
   return { mundo: por(w, g), id: g.id }
 }
 
 /** Arrasta uma parte até um ponto e larga, deixando o encaixe acontecer (ou não). */
 const levar = (w: Mundo, id: string, parte: Parameters<typeof mover>[3], destino: { x: number; y: number }) =>
-  encaixar(mover(w, c, id, parte, destino), c, tokens, id, parte)
+  encaixar(ANBN, mover(w, c, id, parte, destino), c, tokens, id, parte)
 
 describe("garfo solto no mundo", () => {
   it("chega sem contato nenhum", () => {
@@ -206,32 +208,57 @@ const arvoreDeAabb = (): Mundo => {
 
 describe("verificar", () => {
   it("sem nada no teto nao ha arvore", () => {
-    expect(verificar(mundoVazio, tokens)).toEqual({ _tag: "SemRaiz" })
+    expect(verificar(ANBN, mundoVazio, tokens)).toEqual({ _tag: "SemRaiz" })
   })
 
   it("acusa gancho por preencher", () => {
     const { mundo, id } = trazer(mundoVazio, "r1")
     const w = levar(mundo, id, { _tag: "Anel" }, c.teto)
-    expect(verificar(w, tokens)).toEqual({ _tag: "GanchoVazio", quantos: 1 })
+    expect(verificar(ANBN, w, tokens)).toEqual({ _tag: "GanchoVazio", quantos: 1 })
   })
 
   it("aceita a arvore inteira de aabb", () => {
-    expect(verificar(arvoreDeAabb(), tokens)).toEqual({ _tag: "Certo" })
+    expect(verificar(ANBN, arvoreDeAabb(), tokens)).toEqual({ _tag: "Certo" })
   })
 
   it("o e pousado na fresta errada e recusado", () => {
     let w = arvoreDeAabb()
-    const eps = w.garfos.find((g) => g.regra === "r2")!
+    const eps = w.garfos.find((g) => g.regra === R.r2.id)!
     w = levar(w, eps.id, { _tag: "Ponta", i: 0 }, c.fresta(0))
-    expect(verificar(w, tokens)).toEqual({ _tag: "FrestaErrada", esperada: 2, encontrada: 0 })
+    expect(verificar(ANBN, w, tokens)).toEqual({ _tag: "FrestaErrada", esperada: 2, encontrada: 0 })
+  })
+})
+
+describe("gramatica com varios nao-terminais", () => {
+  const toks = lexar(ARITMETICA, "2")
+  const mA = medidas(toks.length)
+  const cA = cenaDe(mA, toks.length)
+  const regra = (id: string) => regraDe(ARITMETICA, id)!
+  const levarA = (w: Mundo, id: string, parte: Parameters<typeof mover>[3], destino: { x: number; y: number }) =>
+    encaixar(ARITMETICA, mover(w, cA, id, parte, destino), cA, toks, id, parte)
+  const trazerA = (w: Mundo, id: string) => {
+    const g = novoGarfo(regra(id), { x: mA.largura / 2, y: 140 })
+    return { mundo: por(w, g), id: g.id }
+  }
+
+  it("um anel so entra num gancho da mesma forma: F nao pendura no E do teto", () => {
+    const { mundo, id } = trazerA(mundoVazio, "F → num")
+    const w = levarA(mundo, id, { _tag: "Anel" }, cA.teto)
+    expect(w.garfos.find((x) => x.id === id)!.anelEm).toBeNull()
   })
 
-  it("todos os niveis tem tokens coerentes com a marca de penduravel", () => {
-    for (const n of NIVEIS) {
-      const as = n.tokens.filter((t) => t === "a").length
-      const bs = n.tokens.filter((t) => t === "b").length
-      const formaDeAnBn = n.tokens.join("") === "a".repeat(as) + "b".repeat(bs) && as === bs
-      expect(formaDeAnBn).toBe(n.penduravel)
-    }
+  it("pendura E → T → F → num sobre o programa 2, garfo por garfo", () => {
+    let w = mundoVazio
+    const e = trazerA(w, "E → T"); w = e.mundo
+    w = levarA(w, e.id, { _tag: "Anel" }, cA.teto)
+
+    const t = trazerA(w, "T → F"); w = t.mundo
+    w = levarA(w, t.id, { _tag: "Anel" }, posPonta(w, cA, w.garfos.find((x) => x.id === e.id)!, 0))
+
+    const f = trazerA(w, "F → num"); w = f.mundo
+    w = levarA(w, f.id, { _tag: "Anel" }, posPonta(w, cA, w.garfos.find((x) => x.id === t.id)!, 0))
+    w = levarA(w, f.id, { _tag: "Ponta", i: 0 }, cA.token(0))
+
+    expect(verificar(ARITMETICA, w, toks)).toEqual({ _tag: "Certo" })
   })
 })
