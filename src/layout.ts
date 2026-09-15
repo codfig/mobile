@@ -23,6 +23,8 @@ export const medidas = (nTokens: number): Medidas => {
 
 /** Os pontos fixos da sala: o gancho do teto e cada token do chão. */
 export type Cena = {
+  readonly largura: number
+  readonly altura: number
   readonly teto: Ponto
   readonly nTokens: number
   readonly token: (i: number) => Ponto
@@ -36,6 +38,8 @@ export const cenaDe = (m: Medidas, nTokens: number): Cena => {
     y: m.chaoY
   })
   return {
+    largura: m.largura,
+    altura: m.altura,
     teto: { x: m.largura / 2, y: m.tetoY },
     nTokens,
     token,
@@ -73,31 +77,45 @@ export type Camera = {
   readonly h: number
 }
 
-const ESCALA_MIN = 0.2
 const ESCALA_MAX = 3
+/** Quanto de vazio, em pixels de tela, pode aparecer entre a borda da sala e a da vista. */
+const FOLGA = 12
 
-export const limitarEscala = (k: number): number => Math.min(ESCALA_MAX, Math.max(ESCALA_MIN, k))
+/** Afastar para quando a sala inteira cabe: longe disso só se veria vazio. */
+const escalaMinima = (m: Medidas, w: number, h: number): number =>
+  Math.min(ESCALA_MAX, Math.min(w / m.largura, h / m.altura) * 0.96)
 
-/** Não deixa a sala sair inteira da tela: no mínimo metade da vista a mostra. */
+export const limitarEscala = (m: Medidas, w: number, h: number, k: number): number =>
+  Math.min(ESCALA_MAX, Math.max(escalaMinima(m, w, h), k))
+
+/** Num eixo: a sala menor que a vista fica no meio; maior, a vista não passa da borda dela. */
+const limitarEixo = (inicio: number, vista: number, sala: number, folga: number): number =>
+  sala + 2 * folga <= vista ? (sala - vista) / 2 : Math.min(sala + folga - vista, Math.max(-folga, inicio))
+
+/**
+ * A sala fica presa à janela: não se afasta além de caber inteira, e as bordas
+ * dela não entram na vista mais que a folga. Assim a sala nunca foge da tela.
+ */
 export const limitar = (m: Medidas, cam: Camera): Camera => {
-  const vw = cam.w / cam.escala
-  const vh = cam.h / cam.escala
+  const escala = limitarEscala(m, cam.w, cam.h, cam.escala)
+  const folga = FOLGA / escala
   return {
     ...cam,
-    x: Math.min(m.largura - vw / 2, Math.max(-vw / 2, cam.x)),
-    y: Math.min(m.altura - vh / 2, Math.max(-vh / 2, cam.y))
+    escala,
+    x: limitarEixo(cam.x, cam.w / escala, m.largura, folga),
+    y: limitarEixo(cam.y, cam.h / escala, m.altura, folga)
   }
 }
 
 /** A sala inteira na tela, centralizada. */
 export const ajustar = (m: Medidas, w: number, h: number): Camera => {
-  const escala = limitarEscala(Math.min(w / m.largura, h / m.altura) * 0.96)
+  const escala = escalaMinima(m, w, h)
   return { x: (m.largura - w / escala) / 2, y: (m.altura - h / escala) / 2, escala, w, h }
 }
 
 /** Aproxima ou afasta mantendo parado o ponto da sala sob (px, py). */
 export const zoomEm = (m: Medidas, cam: Camera, fator: number, px: number, py: number): Camera => {
-  const escala = limitarEscala(cam.escala * fator)
+  const escala = limitarEscala(m, cam.w, cam.h, cam.escala * fator)
   const sx = cam.x + px / cam.escala
   const sy = cam.y + py / cam.escala
   return limitar(m, { ...cam, escala, x: sx - px / escala, y: sy - py / escala })

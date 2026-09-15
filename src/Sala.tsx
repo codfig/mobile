@@ -143,19 +143,24 @@ export const Sala = ({
     const agora = [...dedos.current.values()]
     const { cam, pts: antes } = g
 
+    let nova: Camera | null = null
     if (agora.length === 1 && antes.length === 1) {
       const a0 = antes[0]!
       const a1 = agora[0]!
-      aoMudarCamera(limitar(m, { ...cam, x: cam.x - (a1.x - a0.x) / cam.escala, y: cam.y - (a1.y - a0.y) / cam.escala }))
+      nova = limitar(m, { ...cam, x: cam.x - (a1.x - a0.x) / cam.escala, y: cam.y - (a1.y - a0.y) / cam.escala })
     } else if (agora.length >= 2 && antes.length >= 2) {
       const [a0, b0] = [antes[0]!, antes[1]!]
       const [a1, b1] = [agora[0]!, agora[1]!]
-      const escala = limitarEscala(cam.escala * (dist(a1, b1) / Math.max(dist(a0, b0), 1)))
+      const escala = limitarEscala(m, cam.w, cam.h, cam.escala * (dist(a1, b1) / Math.max(dist(a0, b0), 1)))
       const meio0 = { x: (a0.x + b0.x) / 2, y: (a0.y + b0.y) / 2 }
       const meio1 = { x: (a1.x + b1.x) / 2, y: (a1.y + b1.y) / 2 }
       const fixo = paraSala(cam, meio0.x, meio0.y)
-      aoMudarCamera(limitar(m, { ...cam, escala, x: fixo.x - meio1.x / escala, y: fixo.y - meio1.y / escala }))
+      nova = limitar(m, { ...cam, escala, x: fixo.x - meio1.x / escala, y: fixo.y - meio1.y / escala })
     }
+    if (nova === null) return
+    aoMudarCamera(nova)
+    // o gesto recomeça daqui: batida a borda, voltar o dedo já move a vista, sem zona morta
+    gesto.current = { cam: nova, pts: agora }
   }
 
   const soltarDedo = (e: React.PointerEvent) => {

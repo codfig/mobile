@@ -101,31 +101,49 @@ const trocar = (mundo: Mundo, id: string, f: (g: Garfo) => Garfo): Mundo => ({
   garfos: mundo.garfos.map((g) => (g.id === id ? f(g) : g))
 })
 
+/** Nenhuma peça arrastada sai da sala: fora dela a vista não a alcançaria. */
+const MARGEM = 16
+
+const dentro = (c: Cena, p: Ponto): Ponto => ({
+  x: Math.min(c.largura - MARGEM, Math.max(MARGEM, p.x)),
+  y: Math.min(c.altura - MARGEM, Math.max(MARGEM, p.y))
+})
+
+/** O deslocamento `d` encurtado para que nenhum dos valores saia de [lo, hi]; nunca piora quem já está fora. */
+const deslocamentoDentro = (valores: ReadonlyArray<number>, d: number, lo: number, hi: number): number =>
+  valores.length === 0
+    ? d
+    : Math.min(Math.max(0, hi - Math.max(...valores)), Math.max(Math.min(0, lo - Math.min(...valores)), d))
+
 /**
- * Arrastar o corpo solta o garfo de tudo: você o pegou na mão. O que estava
- * pendurado nas pontas dele vem junto, porque a posição dos filhos é lida a
- * partir das pontas do pai.
+ * Arrastar o corpo leva junto só o que está solto. Um anel pendurado continua no
+ * gancho e uma ponta presa continua no token: encaixe só se desfaz quando se
+ * pega aquela peça em si. O que estava pendurado nas pontas soltas vem junto,
+ * porque a posição dos filhos é lida a partir das pontas do pai.
  */
 export const moverCorpo = (mundo: Mundo, c: Cena, id: string, destino: Ponto): Mundo => {
   const g = achar(mundo, id)
   if (g === undefined) return mundo
   const atual = posAnel(mundo, c, g)
-  const dx = destino.x - atual.x
-  const dy = destino.y - atual.y
+  const soltas = [
+    ...(g.anelEm === null ? [atual] : []),
+    ...g.pontas.flatMap((_, i) => (g.pontasEm[i] == null ? [posPonta(mundo, c, g, i)] : []))
+  ]
+  const dx = deslocamentoDentro(soltas.map((q) => q.x), destino.x - atual.x, MARGEM, c.largura - MARGEM)
+  const dy = deslocamentoDentro(soltas.map((q) => q.y), destino.y - atual.y, MARGEM, c.altura - MARGEM)
   return trocar(mundo, id, (x) => ({
     ...x,
-    anel: { x: atual.x + dx, y: atual.y + dy },
-    pontas: x.pontas.map((_, i) => {
+    anel: x.anelEm === null ? { x: atual.x + dx, y: atual.y + dy } : x.anel,
+    pontas: x.pontas.map((q, i) => {
+      if (x.pontasEm[i] != null) return q
       const daVez = posPonta(mundo, c, x, i)
       return { x: daVez.x + dx, y: daVez.y + dy }
-    }),
-    anelEm: null,
-    pontasEm: x.pontasEm.map(() => null)
+    })
   }))
 }
 
-export const moverAnel = (mundo: Mundo, id: string, p: Ponto): Mundo =>
-  trocar(mundo, id, (g) => ({ ...g, anel: p, anelEm: null }))
+export const moverAnel = (mundo: Mundo, c: Cena, id: string, p: Ponto): Mundo =>
+  trocar(mundo, id, (g) => ({ ...g, anel: dentro(c, p), anelEm: null }))
 
 // ---- pontas vizinhas se repelem ----
 
@@ -151,7 +169,8 @@ const VAO_MINIMO = 28
  * Deve ser chamada a partir do mundo do começo do arrasto: assim, voltar o dedo
  * ao lugar devolve as irmãs ao lugar, em vez de deixá-las onde foram empurradas.
  */
-export const moverPonta = (mundo: Mundo, c: Cena, id: string, i: number, p: Ponto): Mundo => {
+export const moverPonta = (mundo: Mundo, c: Cena, id: string, i: number, alvo: Ponto): Mundo => {
+  const p = dentro(c, alvo)
   const g = achar(mundo, id)
   if (g === undefined) return mundo
   const n = g.pontas.length
@@ -161,8 +180,8 @@ export const moverPonta = (mundo: Mundo, c: Cena, id: string, i: number, p: Pont
   const ys = pos.map((q) => q.y)
   const inicio = [...xs]
 
-  // a arrastada não atravessa irmã presa, e deixa lugar para as soltas do meio
-  let x = p.x
+  // a arrastada não atravessa irmã presa nem parede, e deixa lugar para as soltas do meio
+  let x = Math.min(c.largura - MARGEM - VAO_MINIMO * (n - 1 - i), Math.max(MARGEM + VAO_MINIMO * i, p.x))
   for (let k = 0; k < n; k++) {
     if (k === i || g.pontasEm[k] == null) continue
     const presa = xs[k] ?? 0
@@ -200,6 +219,11 @@ export const moverPonta = (mundo: Mundo, c: Cena, id: string, i: number, p: Pont
     empurrao.forEach((d, j) => (xs[j] = (xs[j] ?? 0) + d))
     ordenar()
   }
+  // empurrada para fora da sala, a irmã para na parede
+  xs.forEach((xj, j) => {
+    if (!fixa(j)) xs[j] = Math.min(c.largura - MARGEM, Math.max(MARGEM, xj))
+  })
+  ordenar()
 
   return trocar(mundo, id, (x0) => ({
     ...x0,
@@ -214,7 +238,7 @@ export const mover = (mundo: Mundo, c: Cena, id: string, parte: Parte, p: Ponto)
   parte._tag === "Corpo"
     ? moverCorpo(mundo, c, id, p)
     : parte._tag === "Anel"
-      ? moverAnel(mundo, id, p)
+      ? moverAnel(mundo, c, id, p)
       : moverPonta(mundo, c, id, parte.i, p)
 
 // ---- encaixar ----

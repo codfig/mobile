@@ -151,7 +151,7 @@ export const App = () => {
 
       <p className="dica">
         Arraste o <strong>anel</strong> até um gancho da mesma forma, e cada <strong>ponta</strong> até o token dela. O{" "}
-        <strong>ramo</strong> move o garfo inteiro. Um dedo no vazio passeia pela sala; dois dedos aproximam.
+        <strong>ramo</strong> move o garfo sem desfazer o que já encaixou. Um dedo no vazio passeia pela sala; dois dedos aproximam.
       </p>
 
       <section className="bandeja-caixa" aria-label="Bandeja de garfos">

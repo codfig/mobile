@@ -48,6 +48,34 @@ describe("garfo solto no mundo", () => {
     expect(posPonta(depois, c, g, 0).x).toBeCloseTo(pontaAntes.x + 40)
   })
 
+  it("arrastar o corpo nao desfaz encaixe: anel no gancho, ponta no token", () => {
+    const { mundo, id } = trazer(mundoVazio, "r1")
+    let w = levar(mundo, id, { _tag: "Anel" }, c.teto)
+    w = levar(w, id, { _tag: "Ponta", i: 0 }, c.token(0))
+    const antes = w.garfos.find((x) => x.id === id)!
+    const soltaAntes = posPonta(w, c, antes, 2)
+    // o destino é relativo ao anel, que está no teto
+    w = mover(w, c, id, { _tag: "Corpo" }, { x: c.teto.x + 30, y: c.teto.y + 20 })
+    const g = w.garfos.find((x) => x.id === id)!
+    expect(g.anelEm).toEqual({ _tag: "Teto" })
+    expect(g.pontasEm[0]).toEqual({ _tag: "Token", i: 0 })
+    expect(posPonta(w, c, g, 0)).toEqual(c.token(0))
+    expect(posPonta(w, c, g, 2)).toEqual({ x: soltaAntes.x + 30, y: soltaAntes.y + 20 })
+  })
+
+  it("nenhuma peca arrastada sai da sala", () => {
+    const { mundo, id } = trazer(mundoVazio, "r1")
+    const naSala = (p: { x: number; y: number }) =>
+      p.x >= 0 && p.x <= c.largura && p.y >= 0 && p.y <= c.altura
+    const pecas = (w: Mundo) => {
+      const g = w.garfos.find((x) => x.id === id)!
+      return [posAnel(w, c, g), ...g.pontas.map((_, j) => posPonta(w, c, g, j))]
+    }
+    expect(pecas(mover(mundo, c, id, { _tag: "Corpo" }, { x: -500, y: 5000 })).every(naSala)).toBe(true)
+    expect(pecas(mover(mundo, c, id, { _tag: "Anel" }, { x: 9000, y: -40 })).every(naSala)).toBe(true)
+    expect(pecas(mover(mundo, c, id, { _tag: "Ponta", i: 1 }, { x: -300, y: -300 })).every(naSala)).toBe(true)
+  })
+
   it("arrastar so o anel estica o garfo, sem levar as pontas", () => {
     const { mundo, id } = trazer(mundoVazio, "r1")
     const antes = mundo.garfos.find((x) => x.id === id)!

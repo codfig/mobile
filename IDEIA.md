@@ -114,10 +114,17 @@ from the start rather than built for the mouse and ported later.
 
 Tap-to-select-then-tap-to-place was tried first and failed: nobody could find
 the gesture. What stayed is direct manipulation. A fork lands in the room
-touching nothing, and every part of it is dragged: the branch moves the whole
-fork, the ring moves only the ring, each hook moves only itself. Sibling hooks
-push each other away gently, only sideways, and never swap order. Snapping is
-just what happens when a piece is let go near a place that accepts it.
+touching nothing, and every part of it is dragged: the branch moves whatever of
+the fork is still free, the ring moves only the ring, each hook moves only
+itself. Sibling hooks push each other away gently, only sideways, and never swap
+order. Snapping is just what happens when a piece is let go near a place that
+accepts it, and only grabbing that piece itself undoes it: dragging the branch
+leaves a hung ring on its hook and a pinned leaf on its token.
+
+The room is bigger than the screen, so it pans and zooms, but it stays attached
+to the window. Zooming out stops once the whole room fits, panning stops once
+an edge of the room reaches the edge of the window, and no piece can be dragged
+out of the room.
 
 ### Where it runs, eventually
 

@@ -9,11 +9,12 @@ Três gramáticas, cada uma com sua sala de programas: `aⁿbⁿ`, parênteses
 balanceados e aritmética com precedência (`E → E + T | T`, `T → T * F | F`,
 `F → ( E ) | num`). Alguns programas estão fora da gramática, sem aviso.
 
-Um garfo chega solto na sala. O ramo arrasta o garfo inteiro, o anel arrasta só
-o anel, cada ponta arrasta só ela; pontas irmãs se afastam de leve e não trocam
-de ordem. Um anel só encaixa num gancho da mesma forma, e uma ponta terminal só
-num token da mesma categoria. Um dedo no vazio passeia pela sala, dois dedos
-aproximam.
+Um garfo chega solto na sala. O ramo arrasta o que o garfo tem de solto, sem
+desfazer encaixe; o anel arrasta só o anel, cada ponta arrasta só ela; pontas
+irmãs se afastam de leve e não trocam de ordem. Um anel só encaixa num gancho da
+mesma forma, e uma ponta terminal só num token da mesma categoria. Um dedo no
+vazio passeia pela sala, dois dedos aproximam; a sala fica presa à janela, e
+nenhuma peça sai dela.
 
 **Verificar** confere a árvore; **Não dá para pendurar** é para os programas de
 fora — o gabarito sai de um reconhecedor, não de marca escrita à mão.
