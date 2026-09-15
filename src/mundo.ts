@@ -128,48 +128,86 @@ export const moverCorpo = (mundo: Mundo, c: Cena, id: string, destino: Ponto): M
 export const moverAnel = (mundo: Mundo, id: string, p: Ponto): Mundo =>
   trocar(mundo, id, (g) => ({ ...g, anel: p, anelEm: null }))
 
-/** Quanto a ponta arrastada andou num eixo, visto a partir do anel. */
-type Eixo = { readonly _tag: "Escala"; readonly k: number } | { readonly _tag: "Desloca"; readonly d: number }
+// ---- pontas vizinhas se repelem ----
 
-const QUASE_ZERO = 6
-const ESCALA_MINIMA = 0.1
-
-const eixo = (antes: number, depois: number): Eixo =>
-  // Uma ponta bem embaixo do anel não tem largura para escalar: aí o eixo desloca.
-  Math.abs(antes) < QUASE_ZERO
-    ? { _tag: "Desloca", d: depois - antes }
-    : { _tag: "Escala", k: Math.max(ESCALA_MINIMA, depois / antes) }
-
-const aplicar = (v: number, e: Eixo): number => (e._tag === "Escala" ? v * e.k : v + e.d)
+/** Abaixo desta distância horizontal, duas pontas irmãs começam a se empurrar. */
+const DISTANCIA_CONFORTAVEL = 64
+/** A repulsão enfraquece com a distância vertical e some a partir desta. */
+const ALCANCE_VERTICAL = 90
+/** Fração do aperto desfeita a cada volta: fraca de propósito. */
+const FORCA = 0.25
+const VOLTAS = 3
+/** Folga mínima entre irmãs vizinhas; é o que impede que troquem de ordem. */
+const VAO_MINIMO = 28
 
 /**
- * Arrastar uma ponta leva as outras junto, em harmonia: o garfo abre e fecha
- * como um leque preso no anel. O quanto a ponta arrastada se afastou do anel,
- * em cada eixo, é o quanto todas as pontas soltas se afastam.
+ * Arrastar uma ponta empurra as irmãs de leve, só na horizontal, e nunca deixa
+ * que troquem de ordem: a ponta 0 fica sempre à esquerda da 1, que fica à
+ * esquerda da 2. Uma irmã no caminho é empurrada adiante em vez de atravessada.
  *
- * Ponta presa num token não se mexe — o chão a segura. E o que estiver
- * pendurado nas pontas vem junto, porque a posição dos filhos é lida delas.
+ * Ponta presa num token não se mexe, e a arrastada não passa por cima dela.
+ * O que estiver pendurado nas pontas acompanha, porque a posição dos filhos é
+ * lida a partir delas.
  *
- * Deve ser chamada sempre a partir do mundo do começo do arrasto, não do
- * quadro anterior: escalar em cima de escala acumula erro e, com o limite
- * mínimo, deformaria o leque sem volta.
+ * Deve ser chamada a partir do mundo do começo do arrasto: assim, voltar o dedo
+ * ao lugar devolve as irmãs ao lugar, em vez de deixá-las onde foram empurradas.
  */
 export const moverPonta = (mundo: Mundo, c: Cena, id: string, i: number, p: Ponto): Mundo => {
   const g = achar(mundo, id)
   if (g === undefined) return mundo
-  const anel = posAnel(mundo, c, g)
-  const antes = posPonta(mundo, c, g, i)
-  const ex = eixo(antes.x - anel.x, p.x - anel.x)
-  const ey = eixo(antes.y - anel.y, p.y - anel.y)
-  return trocar(mundo, id, (x) => ({
-    ...x,
-    pontas: x.pontas.map((q, j) => {
-      if (j === i) return p
-      if (x.pontasEm[j] != null) return q
-      const atual = posPonta(mundo, c, x, j)
-      return { x: anel.x + aplicar(atual.x - anel.x, ex), y: anel.y + aplicar(atual.y - anel.y, ey) }
-    }),
-    pontasEm: x.pontasEm.map((q, j) => (j === i ? null : q))
+  const n = g.pontas.length
+  const fixa = (j: number) => j === i || g.pontasEm[j] != null
+  const pos = g.pontas.map((_, j) => posPonta(mundo, c, g, j))
+  const xs = pos.map((q) => q.x)
+  const ys = pos.map((q) => q.y)
+  const inicio = [...xs]
+
+  // a arrastada não atravessa irmã presa, e deixa lugar para as soltas do meio
+  let x = p.x
+  for (let k = 0; k < n; k++) {
+    if (k === i || g.pontasEm[k] == null) continue
+    const presa = xs[k] ?? 0
+    if (k < i) x = Math.max(x, presa + VAO_MINIMO * (i - k))
+    else x = Math.min(x, presa - VAO_MINIMO * (k - i))
+  }
+  xs[i] = x
+  ys[i] = p.y
+
+  const ordenar = () => {
+    for (let j = 1; j < n; j++) {
+      if (!fixa(j)) xs[j] = Math.max(xs[j] ?? 0, (xs[j - 1] ?? 0) + VAO_MINIMO)
+    }
+    for (let j = n - 2; j >= 0; j--) {
+      if (!fixa(j)) xs[j] = Math.min(xs[j] ?? 0, (xs[j + 1] ?? 0) - VAO_MINIMO)
+    }
+  }
+
+  for (let volta = 0; volta < VOLTAS; volta++) {
+    const empurrao = xs.map((xj, j) => {
+      if (fixa(j)) return 0
+      let soma = 0
+      for (let k = 0; k < n; k++) {
+        if (k === j) continue
+        // Confortável é o que o par já tinha no começo do arrasto, até o teto:
+        // parado, ninguém empurra ninguém, mesmo que tenham ficado apertados antes.
+        const conforto = Math.min(DISTANCIA_CONFORTAVEL, Math.abs((inicio[k] ?? 0) - (inicio[j] ?? 0)))
+        const aperto = conforto - Math.abs((xs[k] ?? 0) - xj)
+        const peso = Math.max(0, 1 - Math.abs((ys[k] ?? 0) - (ys[j] ?? 0)) / ALCANCE_VERTICAL)
+        // o sentido vem da ordem, não da posição: quem vem antes é empurrado para a esquerda
+        if (aperto > 0) soma += aperto * peso * FORCA * (j < k ? -1 : 1)
+      }
+      return soma
+    })
+    empurrao.forEach((d, j) => (xs[j] = (xs[j] ?? 0) + d))
+    ordenar()
+  }
+
+  return trocar(mundo, id, (x0) => ({
+    ...x0,
+    pontas: x0.pontas.map((q, j) =>
+      j === i ? { x: xs[i] ?? p.x, y: p.y } : x0.pontasEm[j] != null ? q : { x: xs[j] ?? q.x, y: ys[j] ?? q.y }
+    ),
+    pontasEm: x0.pontasEm.map((q, j) => (j === i ? null : q))
   }))
 }
 

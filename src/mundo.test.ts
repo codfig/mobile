@@ -57,53 +57,71 @@ describe("garfo solto no mundo", () => {
   })
 })
 
-describe("pontas em harmonia", () => {
-  it("arrastar uma ponta abre o garfo inteiro por igual, como um leque", () => {
-    const { mundo, id } = trazer(mundoVazio, "r1")
-    const g0 = mundo.garfos.find((x) => x.id === id)!
-    const anel = posAnel(mundo, c, g0)
-    // a ponta "a" sai de (-54, +66) do anel e vai para o dobro disso
-    const w = mover(mundo, c, id, { _tag: "Ponta", i: 0 }, { x: anel.x - 108, y: anel.y + 132 })
+describe("pontas vizinhas se repelem", () => {
+  const pontasDe = (w: Mundo, id: string) => {
     const g = w.garfos.find((x) => x.id === id)!
-    expect(posPonta(w, c, g, 1).x).toBeCloseTo(anel.x)
-    expect(posPonta(w, c, g, 1).y).toBeCloseTo(anel.y + 132)
-    expect(posPonta(w, c, g, 2).x).toBeCloseTo(anel.x + 108)
-    expect(posPonta(w, c, g, 2).y).toBeCloseTo(anel.y + 132)
+    return g.pontas.map((_, j) => posPonta(w, c, g, j))
+  }
+
+  it("arrastar para longe, bem abaixo das irmas, nao mexe nelas", () => {
+    const { mundo, id } = trazer(mundoVazio, "r1")
+    const antes = pontasDe(mundo, id)
+    const w = mover(mundo, c, id, { _tag: "Ponta", i: 0 }, { x: antes[0]!.x, y: antes[0]!.y + 200 })
+    const depois = pontasDe(w, id)
+    expect(depois[1]).toEqual(antes[1])
+    expect(depois[2]).toEqual(antes[2])
   })
 
-  it("a ponta presa num token fica onde esta", () => {
+  it("chegar perto empurra a vizinha de leve, so na horizontal", () => {
     const { mundo, id } = trazer(mundoVazio, "r1")
-    let w = levar(mundo, id, { _tag: "Ponta", i: 0 }, c.token(0))
-    const g0 = w.garfos.find((x) => x.id === id)!
-    w = mover(w, c, id, { _tag: "Ponta", i: 2 }, { x: posPonta(w, c, g0, 2).x + 60, y: 300 })
-    const g = w.garfos.find((x) => x.id === id)!
-    expect(g.pontasEm[0]).toEqual({ _tag: "Token", i: 0 })
-    expect(posPonta(w, c, g, 0)).toEqual(c.token(0))
+    const antes = pontasDe(mundo, id)
+    const w = mover(mundo, c, id, { _tag: "Ponta", i: 0 }, { x: antes[0]!.x + 30, y: antes[0]!.y })
+    const depois = pontasDe(w, id)
+    const andou = depois[1]!.x - antes[1]!.x
+    expect(andou).toBeGreaterThan(0)
+    expect(andou).toBeLessThan(30)
+    expect(depois[1]!.y).toBe(antes[1]!.y)
   })
 
-  it("puxar a ponta do meio de lado arrasta as outras de lado, sem esmagar", () => {
+  it("empurrar alem das irmas as carrega adiante, sem trocar a ordem", () => {
     const { mundo, id } = trazer(mundoVazio, "r1")
-    const g0 = mundo.garfos.find((x) => x.id === id)!
-    const antes0 = posPonta(mundo, c, g0, 0)
-    const meio = posPonta(mundo, c, g0, 1)
-    const w = mover(mundo, c, id, { _tag: "Ponta", i: 1 }, { x: meio.x + 30, y: meio.y })
-    const g = w.garfos.find((x) => x.id === id)!
-    expect(posPonta(w, c, g, 0).x).toBeCloseTo(antes0.x + 30)
-    expect(posPonta(w, c, g, 0).y).toBeCloseTo(antes0.y)
+    const antes = pontasDe(mundo, id)
+    const w = mover(mundo, c, id, { _tag: "Ponta", i: 0 }, { x: antes[2]!.x + 80, y: antes[0]!.y })
+    const [a, s, b] = pontasDe(w, id)
+    expect(s!.x).toBeGreaterThan(a!.x)
+    expect(b!.x).toBeGreaterThan(s!.x)
   })
 
-  it("o garfo pendurado numa ponta acompanha quando ela se move", () => {
+  it("voltar o dedo ao lugar devolve as irmas ao lugar", () => {
+    const { mundo, id } = trazer(mundoVazio, "r1")
+    const antes = pontasDe(mundo, id)
+    const w = mover(mundo, c, id, { _tag: "Ponta", i: 0 }, antes[0]!)
+    expect(pontasDe(w, id)).toEqual(antes)
+  })
+
+  it("a ponta presa fica parada e a arrastada nao passa por cima dela", () => {
+    const { mundo, id } = trazer(mundoVazio, "r1")
+    // a ponta 2 e o "b"; o token 2 e um "b"
+    let w = levar(mundo, id, { _tag: "Ponta", i: 2 }, c.token(2))
+    w = mover(w, c, id, { _tag: "Ponta", i: 0 }, { x: c.token(3).x, y: c.token(2).y })
+    const g = w.garfos.find((x) => x.id === id)!
+    expect(g.pontasEm[2]).toEqual({ _tag: "Token", i: 2 })
+    const [a, s, b] = pontasDe(w, id)
+    expect(b).toEqual(c.token(2))
+    expect(a!.x).toBeLessThan(s!.x)
+    expect(s!.x).toBeLessThan(b!.x)
+  })
+
+  it("o garfo pendurado numa ponta acompanha quando ela e empurrada", () => {
     let w = mundoVazio
     const pai = trazer(w, "r1"); w = pai.mundo
     const filho = trazer(w, "r1"); w = filho.mundo
-    w = levar(w, filho.id, { _tag: "Anel" }, posPonta(w, c, w.garfos.find((x) => x.id === pai.id)!, 1))
-    const gPai = w.garfos.find((x) => x.id === pai.id)!
-    const anelPai = posAnel(w, c, gPai)
-    w = mover(w, c, pai.id, { _tag: "Ponta", i: 0 }, { x: anelPai.x - 108, y: anelPai.y + 132 })
-    const gPaiDepois = w.garfos.find((x) => x.id === pai.id)!
+    w = levar(w, filho.id, { _tag: "Anel" }, pontasDe(w, pai.id)[1]!)
+    const antes = pontasDe(w, pai.id)
+    w = mover(w, c, pai.id, { _tag: "Ponta", i: 0 }, { x: antes[1]!.x, y: antes[0]!.y })
     const gFilho = w.garfos.find((x) => x.id === filho.id)!
-    expect(posAnel(w, c, gFilho)).toEqual(posPonta(w, c, gPaiDepois, 1))
-    expect(posAnel(w, c, gFilho).y).toBeCloseTo(anelPai.y + 132)
+    expect(posAnel(w, c, gFilho)).toEqual(pontasDe(w, pai.id)[1])
+    expect(pontasDe(w, pai.id)[1]!.x).toBeGreaterThan(antes[1]!.x)
   })
 })
 

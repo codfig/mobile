@@ -88,8 +88,8 @@ export const App = () => {
       </nav>
 
       <p className="dica">
-        Arraste o <strong>anel</strong> até um gancho, e cada <strong>ponta</strong> até o token dela — as outras
-        pontas acompanham. Arraste o <strong>ramo</strong> para mover o garfo inteiro.
+        Arraste o <strong>anel</strong> até um gancho, e cada <strong>ponta</strong> até o token dela — as vizinhas
+        se afastam de leve, sem trocar de ordem. Arraste o <strong>ramo</strong> para mover o garfo inteiro.
       </p>
 
       <Sala mundo={mundo} cena={cena} m={m} tokens={nivel.tokens} aoMover={aoMover} aoSoltar={aoSoltar} />
