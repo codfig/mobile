@@ -92,41 +92,41 @@ header h1 { margin: 0; font-size: 1.2rem; }
   background: var(--superficie);
   border: 1px solid var(--borda);
   border-radius: 14px;
-  touch-action: manipulation;
+  touch-action: none;          /* o arrasto e nosso, nao da rolagem */
+  user-select: none;
 }
 
 .viga { stroke: var(--madeira); stroke-width: 3; stroke-linecap: round; }
-.ramo { stroke: var(--fraco); stroke-width: 2; }
-.ramo.esticado { stroke: var(--destaque); stroke-width: 2; }
-.ramo.vazio { stroke: var(--fraco); stroke-width: 2; stroke-dasharray: 3 5; }
-.vao { stroke: var(--destaque); stroke-width: 2; stroke-dasharray: 2 6; opacity: 0.55; }
+.ramo { stroke: var(--fraco); stroke-width: 2; pointer-events: none; }
+.ramo.vazio { stroke-dasharray: 3 5; }
+
+/* alca invisivel e grossa por cima de cada ramo: arrastar o ramo move o garfo */
+.pega-corpo { stroke: transparent; stroke-width: 18; cursor: grab; }
+.pega { cursor: grab; }
+.garfo-mundo.movendo .pega, .garfo-mundo.movendo .pega-corpo { cursor: grabbing; }
 
 .peca { fill: var(--superficie); stroke: var(--fraco); stroke-width: 2; }
 .peca.livre { fill: var(--superficie); stroke: var(--destaque); stroke-width: 2.5; }
 .peca.folha { fill: var(--destaque); stroke: none; }
+.anel { fill: none; stroke: var(--texto); stroke-width: 3; }
+
 .token { fill: none; stroke: var(--madeira); stroke-width: 2.5; }
+.token-caixa.aceso .token { stroke: var(--bom); stroke-width: 3.5; }
+
+/* um gancho vago e um buraco esperando peca; aceso quando aceita o que vem vindo */
+.encaixe { fill: none; stroke: var(--destaque); stroke-width: 1.5; stroke-dasharray: 3 4; opacity: 0.55; }
+.encaixe.aceso { stroke: var(--bom); stroke-width: 3; stroke-dasharray: none; opacity: 1; }
 
 .alvo { fill: transparent; }
-.no { cursor: pointer; }
 
-/* um gancho livre tem de parecer um buraco esperando peca */
-.encaixe { fill: none; stroke: var(--destaque); stroke-width: 1.5; stroke-dasharray: 3 4; opacity: 0.5; }
-.gancho.escolhido .encaixe { opacity: 1; stroke-width: 2.5; stroke-dasharray: none; }
-.gancho.chamando .encaixe { animation: chamar 1.2s ease-in-out infinite; }
-
-@keyframes chamar {
-  0%, 100% { opacity: 0.35; }
-  50% { opacity: 1; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .gancho.chamando .encaixe { animation: none; opacity: 1; }
-}
+.garfo-mundo.movendo { opacity: 0.92; }
 
 .rotulo, .rotulo-token, .epsilon {
   text-anchor: middle;
   font-family: ui-monospace, Menlo, Consolas, monospace;
   font-size: 13px;
   fill: var(--texto);
+  pointer-events: none;
 }
 .rotulo-token { fill: var(--fraco); }
 .epsilon { fill: var(--fraco); font-size: 15px; }
