@@ -213,9 +213,25 @@ describe("tirar", () => {
     const filho = trazer(w, "r1"); w = filho.mundo
     const gPai = w.garfos.find((x) => x.id === pai.id)!
     w = levar(w, filho.id, { _tag: "Anel" }, posPonta(w, c, gPai, 1))
-    const depois = tirar(w, pai.id)
+    const onde = posAnel(w, c, w.garfos.find((x) => x.id === filho.id)!)
+    const depois = tirar(w, c, pai.id)
     expect(depois.garfos).toHaveLength(1)
     expect(depois.garfos[0]!.anelEm).toBeNull()
+    // solto, mas no mesmo lugar em que estava pendurado
+    expect(posAnel(depois, c, depois.garfos[0]!)).toEqual(onde)
+  })
+
+  it("tirar um garfo do meio mantem o resto da subarvore pendurado e preso", () => {
+    const toks = lexar(ARITMETICA, "2 + 3 * 4")
+    const cN = cenaDe(medidas(toks.length), toks.length)
+    const w = pendurarArvore(cN, derivar(ARITMETICA, toks)!)
+    const mult = w.garfos.find((g) => g.regra === "T → T * F")!
+    const depois = tirar(w, cN, mult.id)
+    expect(depois.garfos).toHaveLength(w.garfos.length - 1)
+    // os dois filhos da multiplicacao ficam soltos; os netos seguem pendurados neles
+    const soltos = depois.garfos.filter((g) => g.anelEm === null)
+    expect(soltos.map((g) => g.regra).sort()).toEqual(["F → num", "T → F"])
+    expect(depois.garfos.filter((g) => g.pontasEm.some((p) => p?._tag === "Token"))).toHaveLength(4)
   })
 })
 

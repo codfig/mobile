@@ -164,6 +164,25 @@ header h1 { margin: 0 0 10px; font-size: 1.2rem; }
 }
 .camera-botoes button.largo { font-size: 0.82rem; }
 
+/* aparece só enquanto um garfo é arrastado pelo ramo; não pega o dedo, que continua preso ao garfo */
+.faixa-devolver {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--borda);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--superficie) 88%, transparent);
+  color: var(--fraco);
+  font-size: 0.85rem;
+  pointer-events: none;
+}
+.faixa-devolver.sobre { border-color: var(--ruim); color: var(--ruim); border-style: solid; }
+.garfo-mundo.devolvendo { opacity: 0.35; }
+
 .sala-canto { position: absolute; left: 8px; top: 8px; }
 .interruptor {
   display: flex;

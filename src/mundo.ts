@@ -51,14 +51,20 @@ export const novoGarfo = (regra: Regra, onde: Ponto): Garfo => {
 
 export const por = (mundo: Mundo, g: Garfo): Mundo => ({ garfos: [...mundo.garfos, g] })
 
-export const tirar = (mundo: Mundo, id: string): Mundo => ({
+const achar = (mundo: Mundo, id: string): Garfo | undefined => mundo.garfos.find((g) => g.id === id)
+
+/**
+ * Devolve o garfo à bandeja. Quem estava pendurado nele fica solto na sala, em
+ * vez de sumir junto, e o anel dele fica onde estava — assim um erro no meio da
+ * árvore não custa o trabalho certo que pende abaixo.
+ */
+export const tirar = (mundo: Mundo, c: Cena, id: string): Mundo => ({
   garfos: mundo.garfos
     .filter((g) => g.id !== id)
-    // quem estava pendurado nele cai solto, em vez de sumir junto
-    .map((g) => (g.anelEm?._tag === "Ponta" && g.anelEm.garfo === id ? { ...g, anelEm: null } : g))
+    .map((g) =>
+      g.anelEm?._tag === "Ponta" && g.anelEm.garfo === id ? { ...g, anel: posAnel(mundo, c, g), anelEm: null } : g
+    )
 })
-
-const achar = (mundo: Mundo, id: string): Garfo | undefined => mundo.garfos.find((g) => g.id === id)
 
 export const posAnel = (mundo: Mundo, c: Cena, g: Garfo, prof = 0): Ponto => {
   const em = g.anelEm

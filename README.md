@@ -15,7 +15,9 @@ irmãs se afastam de leve e não trocam de ordem. Um anel só encaixa num gancho
 mesma forma, e uma ponta terminal só num token da mesma categoria. Um dedo no
 vazio passeia pela sala, dois dedos aproximam; a sala fica presa à janela, e
 nenhuma peça sai dela. O interruptor **Gravidade** faz as juntas que chegam a
-uma folha presa descerem e ficarem a prumo sobre o que as segura.
+uma folha presa descerem e ficarem a prumo sobre o que as segura. Um garfo
+arrastado pelo ramo até a faixa no pé da sala volta à bandeja, e os que pendiam
+dele ficam soltos onde estavam. **Resposta** pendura a árvore inteira.
 
 **Verificar** confere a árvore; **Não dá para pendurar** é para os programas de
 fora — o gabarito sai de um reconhecedor, não de marca escrita à mão.

@@ -134,6 +134,14 @@ export const App = () => {
     })
   }
 
+  const aoDevolver = (garfo: string) => {
+    // os que pendiam dele caem soltos onde estavam antes do arrasto, não onde ele os levou
+    const inicio = inicioDoArrasto.current
+    inicioDoArrasto.current = null
+    setMundo((w) => tirar(inicio ?? w, cena, garfo))
+    setRecado(null)
+  }
+
   // A gravidade anda um passo por quadro enquanto houver junta fora do lugar, e
   // espera o dedo soltar: ela não disputa a peça com quem a arrasta.
   useEffect(() => {
@@ -179,6 +187,7 @@ export const App = () => {
         aoMudarCamera={aoMudarCamera}
         aoMover={aoMover}
         aoSoltar={aoSoltar}
+        aoDevolver={aoDevolver}
         canto={
           <button
             type="button"
@@ -197,7 +206,7 @@ export const App = () => {
 
       <p className="dica">
         Arraste o <strong>anel</strong> até um gancho da mesma forma, e cada <strong>ponta</strong> até o token dela. O{" "}
-        <strong>ramo</strong> move o garfo sem desfazer o que já encaixou. Um dedo no vazio passeia pela sala; dois dedos aproximam. Com a{" "}
+        <strong>ramo</strong> move o garfo sem desfazer o que já encaixou; levado até o pé da sala, devolve o garfo à bandeja. Um dedo no vazio passeia pela sala; dois dedos aproximam. Com a{" "}
         <strong>gravidade</strong>, as juntas descem e se alinham sobre o que as prende ao chão.
       </p>
 
@@ -255,7 +264,7 @@ export const App = () => {
           disabled={mundo.garfos.length === 0}
           onClick={() => {
             const ultimo = mundo.garfos[mundo.garfos.length - 1]
-            if (ultimo !== undefined) setMundo((w) => tirar(w, ultimo.id))
+            if (ultimo !== undefined) setMundo((w) => tirar(w, cena, ultimo.id))
           }}
         >
           Tirar o último

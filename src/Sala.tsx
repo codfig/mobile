@@ -27,6 +27,9 @@ import {
   type Parte
 } from "./mundo.js"
 
+/** Altura, em pixels de tela, da faixa no pé da sala onde um garfo é devolvido à bandeja. */
+const FAIXA_DE_DEVOLVER = 64
+
 type Arrasto = {
   readonly garfo: string
   readonly parte: Parte
@@ -52,6 +55,7 @@ export const Sala = ({
   aoMudarCamera,
   aoMover,
   aoSoltar,
+  aoDevolver,
   canto
 }: {
   gramatica: Gramatica
@@ -63,12 +67,15 @@ export const Sala = ({
   aoMudarCamera: (c: Camera) => void
   aoMover: (garfo: string, parte: Parte, p: Ponto) => void
   aoSoltar: (garfo: string, parte: Parte) => void
+  /** O garfo arrastado pelo ramo foi largado na faixa de devolver. */
+  aoDevolver: (garfo: string) => void
   /** O que fica no canto de cima à esquerda, sobre a sala. */
   canto?: ReactNode
 }) => {
   const caixaRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const [arrasto, setArrasto] = useState<Arrasto | null>(null)
+  const [sobreDevolver, setSobreDevolver] = useState(false)
 
   const cameraRef = useRef(camera)
   cameraRef.current = camera
@@ -114,6 +121,10 @@ export const Sala = ({
     return r === undefined ? { x: 0, y: 0 } : { x: e.clientX - r.left, y: e.clientY - r.top }
   }
 
+  // Só o garfo pego pelo ramo pode ser devolvido: pegar anel ou ponta é para desencaixar.
+  // O que conta é o dedo, não o garfo, que para na borda da sala.
+  const naFaixa = (a: Arrasto, q: Ponto) => a.parte._tag === "Corpo" && camera !== null && q.y > camera.h - FAIXA_DE_DEVOLVER
+
   const comecar = (e: React.PointerEvent, g: Garfo, parte: Parte) => {
     // com dedos já na vista, este toque é o segundo dedo de uma pinça
     if (camera === null || arrasto !== null || dedos.current.size > 0) return
@@ -137,6 +148,7 @@ export const Sala = ({
     if (arrasto !== null) {
       if (e.pointerId !== arrasto.ponteiro) return
       const q = relativo(e)
+      setSobreDevolver(naFaixa(arrasto, q))
       const p = paraSala(camera, q.x, q.y)
       aoMover(arrasto.garfo, arrasto.parte, { x: p.x + arrasto.dx, y: p.y + arrasto.dy })
       return
@@ -169,8 +181,10 @@ export const Sala = ({
 
   const soltarDedo = (e: React.PointerEvent) => {
     if (arrasto !== null && e.pointerId === arrasto.ponteiro) {
-      aoSoltar(arrasto.garfo, arrasto.parte)
+      if (e.type === "pointerup" && naFaixa(arrasto, relativo(e))) aoDevolver(arrasto.garfo)
+      else aoSoltar(arrasto.garfo, arrasto.parte)
       setArrasto(null)
+      setSobreDevolver(false)
       return
     }
     if (!dedos.current.delete(e.pointerId)) return
@@ -265,7 +279,12 @@ export const Sala = ({
               if (regra === undefined) return null
               const anel = posAnel(mundo, cena, g)
               return (
-                <g key={g.id} className={arrasto?.garfo === g.id ? "garfo-mundo movendo" : "garfo-mundo"}>
+                <g
+                  key={g.id}
+                  className={
+                    arrasto?.garfo !== g.id ? "garfo-mundo" : sobreDevolver ? "garfo-mundo movendo devolvendo" : "garfo-mundo movendo"
+                  }
+                >
                   {regra.corpo.map((s, i) => {
                     const p = posPonta(mundo, cena, g, i)
                     const d = curvaDoRamo(anel.x, anel.y, p.x, p.y, abracoDoRamo(mundo, cena, g, i))
@@ -313,6 +332,12 @@ export const Sala = ({
           </>
         )}
       </svg>
+
+      {arrasto?.parte._tag === "Corpo" && (
+        <div className={sobreDevolver ? "faixa-devolver sobre" : "faixa-devolver"} style={{ height: FAIXA_DE_DEVOLVER }}>
+          {sobreDevolver ? "Solte para devolver à bandeja" : "Arraste até aqui para devolver à bandeja"}
+        </div>
+      )}
 
       {canto !== undefined && <div className="sala-canto">{canto}</div>}
 

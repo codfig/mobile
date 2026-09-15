@@ -121,6 +121,12 @@ order. Snapping is just what happens when a piece is let go near a place that
 accepts it, and only grabbing that piece itself undoes it: dragging the branch
 leaves a hung ring on its hook and a pinned leaf on its token.
 
+Any fork can be put back. While a fork is dragged by its branch, a strip appears
+along the bottom of the room; dropping it there returns it to the toolbox. The
+forks that hung from it come loose right where they were hanging, still holding
+whatever they hold themselves, so a mistake in the middle of the tree doesn't
+cost the correct work below it.
+
 The room is bigger than the screen, so it pans and zooms, but it stays attached
 to the window. Zooming out stops once the whole room fits, panning stops once
 an edge of the room reaches the edge of the window, and no piece can be dragged
