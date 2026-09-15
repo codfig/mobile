@@ -84,6 +84,27 @@ needs vertical room a phone doesn't have. So the interaction is designed for
 touch from the start (likely tap-to-select a fork, tap-to-place it, with pan and
 zoom on the room), rather than built for the mouse and ported later.
 
+### Where it runs, eventually
+
+Cloudflare, with Effect-TS throughout: Workers and Pages for delivery, plus
+whichever Cloudflare storage primitive fits once the app actually has state to
+keep.
+
+That is a direction, not a task. The prototype needs no backend at all — one
+hardcoded level, no accounts, no saved progress, nothing over the network. So
+the infrastructure stays postponed, and postponing it costs nothing as long as
+one cheap rule holds from the first line:
+
+**No Node-only APIs, in the app or in the grammar engine.** Workers run a
+web-standard runtime rather than Node, so anything written against `fs`,
+`path`, Node streams or Node's `Buffer` would have to be rewritten to move
+there. Staying on web-standard APIs — `fetch`, Web Crypto, `Request`/`Response`
+— keeps that door open for free, and the grammar engine is pure computation
+that has no reason to reach for Node in the first place.
+
+Everything else waits until there is a reason: where levels live, whether
+progress syncs between devices, whether there are accounts at all.
+
 ## First prototype
 
 The grammar engine is the easy half: checking a derivation is on the order of a
