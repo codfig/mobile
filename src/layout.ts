@@ -23,9 +23,9 @@ export const medidas = (nTokens: number): Medidas => {
   const largura = Math.max(340, 96 + Math.max(nTokens - 1, 0) * passo)
   return {
     largura,
-    altura: 520,
-    tetoY: 48,
-    chaoY: 432,
+    altura: 336,
+    tetoY: 40,
+    chaoY: 286,
     passo,
     xToken: (i) => largura / 2 + (i - (nTokens - 1) / 2) * passo
   }

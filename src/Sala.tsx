@@ -26,6 +26,7 @@ export const Sala = ({
   m,
   tokens,
   temRegraNaMao,
+  ganchoEscolhido,
   aoTocarGancho,
   aoTocarGarfo
 }: {
@@ -33,6 +34,7 @@ export const Sala = ({
   m: Medidas
   tokens: ReadonlyArray<Categoria>
   temRegraNaMao: boolean
+  ganchoEscolhido: string | null
   aoTocarGancho: (id: string) => void
   aoTocarGarfo: (id: string) => void
 }) => {
@@ -95,18 +97,22 @@ export const Sala = ({
       {nos.map((p) => {
         const no = p.no
         switch (no._tag) {
-          case "Gancho":
+          case "Gancho": {
+            const escolhido = ganchoEscolhido === no.id
             return (
               <g
                 key={no.id}
                 onClick={() => aoTocarGancho(no.id)}
-                className={temRegraNaMao ? "no gancho chamando" : "no gancho"}
+                className={`no gancho${temRegraNaMao ? " chamando" : ""}${escolhido ? " escolhido" : ""}`}
               >
                 <circle cx={p.x} cy={p.y} r={24} className="alvo" />
+                {/* encaixe tracejado: um gancho livre precisa parecer um buraco a preencher */}
+                <circle cx={p.x} cy={p.y} r={21} className="encaixe" />
                 <Forma tipo="naoTerminal" x={p.x} y={p.y} r={13} classe="peca livre" />
                 <text x={p.x} y={p.y + 4} className="rotulo">S</text>
               </g>
             )
+          }
           case "Garfo":
             return (
               <g key={no.id} onClick={() => aoTocarGarfo(no.id)} className="no garfo">
