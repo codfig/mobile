@@ -241,6 +241,84 @@ export const mover = (mundo: Mundo, c: Cena, id: string, parte: Parte, p: Ponto)
       ? moverAnel(mundo, c, id, p)
       : moverPonta(mundo, c, id, parte.i, p)
 
+// ---- gravidade ----
+
+/** Distância vertical preferida entre um nível da árvore e o de baixo. */
+const DEGRAU = 66
+/** Folga que a gravidade deixa abaixo do teto quando a árvore é funda. */
+const FOLGA_TETO = 40
+
+/**
+ * Onde cada junta cai com a gravidade ligada. Junta é uma ponta com um garfo
+ * pendurado nela, desde que por esse garfo se chegue a uma folha presa no chão.
+ * Ela desce até um degrau acima do mais alto que tem embaixo, e fica bem em cima
+ * dele quando ele é um só, ou no meio deles quando são vários.
+ *
+ * Folhas estão todas no chão, então "um degrau acima do mais alto embaixo" é o
+ * mesmo que o chão menos tantos degraus quanto a junta tem de altura. O degrau
+ * encurta se a árvore mais alta não couber abaixo do teto.
+ */
+const alvosDaGravidade = (mundo: Mundo, c: Cena): ReadonlyMap<string, Ponto> => {
+  const chao = c.fresta(0).y
+  const filhoEm = new Map<string, Garfo>()
+  for (const g of mundo.garfos) {
+    if (g.anelEm?._tag === "Ponta") filhoEm.set(`${g.anelEm.garfo}:${g.anelEm.i}`, g)
+  }
+
+  // altura e x de cada junta, de baixo para cima; null quando não chega a folha
+  const juntas = new Map<string, { x: number; h: number } | null>()
+  const junta = (g: Garfo, i: number, prof: number): { x: number; h: number } | null => {
+    const chave = `${g.id}:${i}`
+    const pronta = juntas.get(chave)
+    if (pronta !== undefined) return pronta
+    const filho = filhoEm.get(chave)
+    if (filho === undefined || prof > 64) return null
+    const embaixo = filho.pontas.flatMap((_, j) => {
+      const preso = filho.pontasEm[j]
+      if (preso != null) return [{ x: posPonta(mundo, c, filho, j).x, h: 0 }]
+      const abaixo = junta(filho, j, prof + 1)
+      return abaixo === null ? [] : [abaixo]
+    })
+    const r =
+      embaixo.length === 0
+        ? null
+        : { x: embaixo.reduce((s, q) => s + q.x, 0) / embaixo.length, h: 1 + Math.max(...embaixo.map((q) => q.h)) }
+    juntas.set(chave, r)
+    return r
+  }
+  for (const g of mundo.garfos) g.pontas.forEach((_, i) => junta(g, i, 0))
+
+  const alturaMax = Math.max(0, ...[...juntas.values()].map((j) => j?.h ?? 0))
+  const degrau = alturaMax === 0 ? DEGRAU : Math.min(DEGRAU, (chao - c.teto.y - FOLGA_TETO) / alturaMax)
+  const alvos = new Map<string, Ponto>()
+  for (const [chave, j] of juntas) if (j !== null) alvos.set(chave, { x: j.x, y: chao - j.h * degrau })
+  return alvos
+}
+
+/**
+ * Um passo da gravidade: cada junta anda a `fracao` do caminho até onde cai.
+ * Com 1, chega de uma vez. Quando nada mais se mexe, devolve o mesmo mundo, e
+ * é assim que quem anima sabe que parou.
+ */
+export const assentar = (mundo: Mundo, c: Cena, fracao = 1): Mundo => {
+  const alvos = alvosDaGravidade(mundo, c)
+  let mexeu = false
+  const garfos = mundo.garfos.map((g) => {
+    let mexeuAqui = false
+    const pontas = g.pontas.map((q, i) => {
+      const alvo = alvos.get(`${g.id}:${i}`)
+      if (alvo === undefined || (q.x === alvo.x && q.y === alvo.y)) return q
+      mexeuAqui = true
+      const perto = Math.hypot(alvo.x - q.x, alvo.y - q.y) * (1 - fracao) < 0.5
+      return perto ? alvo : { x: q.x + (alvo.x - q.x) * fracao, y: q.y + (alvo.y - q.y) * fracao }
+    })
+    if (!mexeuAqui) return g
+    mexeu = true
+    return { ...g, pontas }
+  })
+  return mexeu ? { garfos } : mundo
+}
+
 // ---- encaixar ----
 
 export const RAIO = 34

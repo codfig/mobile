@@ -126,6 +126,15 @@ to the window. Zooming out stops once the whole room fits, panning stops once
 an edge of the room reaches the edge of the window, and no piece can be dragged
 out of the room.
 
+A **gravity** switch tidies what is already connected. A joint is a hook with a
+fork hanging from it, provided that the path through that fork reaches a leaf
+pinned to the floor. With gravity on, every such joint drifts down until it is
+one level above the highest thing hanging below it. It sits directly above that
+thing when there is only one, and centered over them when there are several.
+Joints whose path doesn't reach the floor yet stay where they were left.
+Gravity waits while a piece is being dragged and settles again once it is let
+go.
+
 ### Where it runs, eventually
 
 Cloudflare, with Effect-TS throughout: Workers and Pages for delivery, plus

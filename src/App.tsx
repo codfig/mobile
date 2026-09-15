@@ -1,10 +1,25 @@
-import { useCallback, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { textoDoSimbolo, type Gramatica, type Regra } from "./gramatica.js"
 import { Etiqueta, NaoTerminal } from "./Formas.jsx"
 import { cenaDe, medidas, type Camera, type Ponto } from "./layout.js"
-import { encaixar, mover, mundoVazio, novoGarfo, por, tirar, verificar, type Mundo, type Parte, type Veredito } from "./mundo.js"
+import {
+  assentar,
+  encaixar,
+  mover,
+  mundoVazio,
+  novoGarfo,
+  por,
+  tirar,
+  verificar,
+  type Mundo,
+  type Parte,
+  type Veredito
+} from "./mundo.js"
 import { TRILHAS } from "./niveis.js"
 import { Sala } from "./Sala.jsx"
+
+/** Fração do caminho que cada junta anda por quadro: cai rápido e pousa devagar. */
+const PASSO_DA_GRAVIDADE = 0.16
 
 type Recado = { readonly tom: "bom" | "ruim" | "neutro"; readonly texto: string }
 
@@ -74,6 +89,7 @@ export const App = () => {
   const [mundo, setMundo] = useState<Mundo>(mundoVazio)
   const [camera, setCamera] = useState<Camera | null>(null)
   const [recado, setRecado] = useState<Recado | null>(null)
+  const [gravidade, setGravidade] = useState(false)
 
   const trilha = TRILHAS[iTrilha] ?? TRILHAS[0]!
   const gramatica = trilha.gramatica
@@ -109,8 +125,22 @@ export const App = () => {
     })
   const aoSoltar = (garfo: string, parte: Parte) => {
     inicioDoArrasto.current = null
-    setMundo((w) => encaixar(gramatica, w, cena, nivel.tokens, garfo, parte))
+    setMundo((w) => {
+      const encaixado = encaixar(gramatica, w, cena, nivel.tokens, garfo, parte)
+      // o primeiro passo já aqui, para a gravidade retomar mesmo se o encaixe não mudou nada
+      return gravidade ? assentar(encaixado, cena, PASSO_DA_GRAVIDADE) : encaixado
+    })
   }
+
+  // A gravidade anda um passo por quadro enquanto houver junta fora do lugar, e
+  // espera o dedo soltar: ela não disputa a peça com quem a arrasta.
+  useEffect(() => {
+    if (!gravidade || inicioDoArrasto.current !== null) return
+    const quadro = requestAnimationFrame(() =>
+      setMundo((w) => (inicioDoArrasto.current !== null ? w : assentar(w, cena, PASSO_DA_GRAVIDADE)))
+    )
+    return () => cancelAnimationFrame(quadro)
+  }, [gravidade, mundo, cena])
   const aoMudarCamera = useCallback((c: Camera) => setCamera(c), [])
 
   return (
@@ -147,11 +177,26 @@ export const App = () => {
         aoMudarCamera={aoMudarCamera}
         aoMover={aoMover}
         aoSoltar={aoSoltar}
+        canto={
+          <button
+            type="button"
+            role="switch"
+            aria-checked={gravidade}
+            className={gravidade ? "interruptor ligado" : "interruptor"}
+            onClick={() => setGravidade((g) => !g)}
+          >
+            <span className="trilho" aria-hidden="true">
+              <span className="botao" />
+            </span>
+            Gravidade
+          </button>
+        }
       />
 
       <p className="dica">
         Arraste o <strong>anel</strong> até um gancho da mesma forma, e cada <strong>ponta</strong> até o token dela. O{" "}
-        <strong>ramo</strong> move o garfo sem desfazer o que já encaixou. Um dedo no vazio passeia pela sala; dois dedos aproximam.
+        <strong>ramo</strong> move o garfo sem desfazer o que já encaixou. Um dedo no vazio passeia pela sala; dois dedos aproximam. Com a{" "}
+        <strong>gravidade</strong>, as juntas descem e se alinham sobre o que as prende ao chão.
       </p>
 
       <section className="bandeja-caixa" aria-label="Bandeja de garfos">

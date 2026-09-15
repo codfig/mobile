@@ -3,6 +3,7 @@ import { lexar, regraDe } from "./gramatica.js"
 import { ANBN, ARITMETICA } from "./niveis.js"
 import { cenaDe, medidas } from "./layout.js"
 import {
+  assentar,
   encaixar,
   mover,
   mundoVazio,
@@ -288,5 +289,82 @@ describe("gramatica com varios nao-terminais", () => {
     w = levarA(w, f.id, { _tag: "Ponta", i: 0 }, cA.token(0))
 
     expect(verificar(ARITMETICA, w, toks)).toEqual({ _tag: "Certo" })
+  })
+})
+
+describe("gravidade", () => {
+  const toks = lexar(ARITMETICA, "2")
+  const mA = medidas(toks.length)
+  const cA = cenaDe(mA, toks.length)
+  const acharA = (w: Mundo, id: string) => w.garfos.find((x) => x.id === id)!
+  const levarA = (w: Mundo, id: string, parte: Parameters<typeof mover>[3], destino: { x: number; y: number }) =>
+    encaixar(ARITMETICA, mover(w, cA, id, parte, destino), cA, toks, id, parte)
+  const trazerA = (w: Mundo, regra: string, x = mA.largura / 2) => {
+    const g = novoGarfo(regraDe(ARITMETICA, regra)!, { x, y: 140 })
+    return { mundo: por(w, g), id: g.id }
+  }
+
+  /** E → T → F pendurados um no outro, fora de prumo; com `folha`, F → num preso no token. */
+  const cadeia = (folha: boolean) => {
+    let w = mundoVazio
+    const e = trazerA(w, "E → T"); w = e.mundo
+    w = levarA(w, e.id, { _tag: "Anel" }, cA.teto)
+    w = mover(w, cA, e.id, { _tag: "Ponta", i: 0 }, { x: 60, y: 150 })
+    const t = trazerA(w, "T → F"); w = t.mundo
+    w = levarA(w, t.id, { _tag: "Anel" }, posPonta(w, cA, acharA(w, e.id), 0))
+    w = mover(w, cA, t.id, { _tag: "Ponta", i: 0 }, { x: 280, y: 200 })
+    const f = trazerA(w, "F → num"); w = f.mundo
+    w = levarA(w, f.id, { _tag: "Anel" }, posPonta(w, cA, acharA(w, t.id), 0))
+    if (folha) w = levarA(w, f.id, { _tag: "Ponta", i: 0 }, cA.token(0))
+    return { w, e: e.id, t: t.id, f: f.id }
+  }
+
+  it("as juntas de uma cadeia descem e ficam a prumo sobre a folha", () => {
+    const { w, e, t } = cadeia(true)
+    const assentado = assentar(w, cA)
+    const juntaT = posPonta(assentado, cA, acharA(assentado, e), 0)
+    const juntaF = posPonta(assentado, cA, acharA(assentado, t), 0)
+    expect(juntaF.x).toBeCloseTo(cA.token(0).x)
+    expect(juntaT.x).toBeCloseTo(cA.token(0).x)
+    expect(juntaF.y).toBeLessThan(cA.token(0).y)
+    expect(juntaT.y).toBeLessThan(juntaF.y)
+    // mais baixa do que estava
+    expect(juntaT.y).toBeGreaterThan(posPonta(w, cA, acharA(w, e), 0).y)
+  })
+
+  it("sem folha presa no fim do caminho, nada cai", () => {
+    const { w } = cadeia(false)
+    expect(assentar(w, cA)).toBe(w)
+  })
+
+  it("com varios embaixo, a junta fica no meio deles; e junta sem teto tambem cai", () => {
+    // em aabb: um S → a S b solto, com outro pendurado no S dele, preso no "a" 1 e no "b" 2
+    let w = mundoVazio
+    const pai = trazer(w, "r1"); w = pai.mundo
+    const filho = trazer(w, "r1"); w = filho.mundo
+    w = levar(w, filho.id, { _tag: "Anel" }, posPonta(w, c, w.garfos.find((x) => x.id === pai.id)!, 1))
+    w = levar(w, filho.id, { _tag: "Ponta", i: 0 }, c.token(1))
+    w = levar(w, filho.id, { _tag: "Ponta", i: 2 }, c.token(2))
+    const assentado = assentar(w, c)
+    const junta = posPonta(assentado, c, assentado.garfos.find((x) => x.id === pai.id)!, 1)
+    expect(junta.x).toBeCloseTo((c.token(1).x + c.token(2).x) / 2)
+    expect(junta.y).toBeCloseTo(c.token(1).y - 66)
+  })
+
+  it("aos poucos: cada passo aproxima, e parado devolve o mesmo mundo", () => {
+    const { w, e } = cadeia(true)
+    const alvo = posPonta(assentar(w, cA), cA, acharA(assentar(w, cA), e), 0)
+    const dist = (x: Mundo) => {
+      const p = posPonta(x, cA, acharA(x, e), 0)
+      return Math.hypot(p.x - alvo.x, p.y - alvo.y)
+    }
+    let x = w
+    const antes = dist(x)
+    x = assentar(x, cA, 0.2)
+    expect(dist(x)).toBeLessThan(antes)
+    expect(dist(x)).toBeGreaterThan(0)
+    for (let k = 0; k < 200; k++) x = assentar(x, cA, 0.2)
+    expect(dist(x)).toBe(0)
+    expect(assentar(x, cA, 0.2)).toBe(x)
   })
 })

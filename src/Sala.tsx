@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import { regraDe, type Gramatica, type Token } from "./gramatica.js"
 import { Etiqueta, NaoTerminal } from "./Formas.jsx"
 import {
@@ -50,7 +50,8 @@ export const Sala = ({
   camera,
   aoMudarCamera,
   aoMover,
-  aoSoltar
+  aoSoltar,
+  canto
 }: {
   gramatica: Gramatica
   mundo: Mundo
@@ -61,6 +62,8 @@ export const Sala = ({
   aoMudarCamera: (c: Camera) => void
   aoMover: (garfo: string, parte: Parte, p: Ponto) => void
   aoSoltar: (garfo: string, parte: Parte) => void
+  /** O que fica no canto de cima à esquerda, sobre a sala. */
+  canto?: ReactNode
 }) => {
   const caixaRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
@@ -315,6 +318,8 @@ export const Sala = ({
           </>
         )}
       </svg>
+
+      {canto !== undefined && <div className="sala-canto">{canto}</div>}
 
       <div className="camera-botoes">
         <button type="button" aria-label="Aproximar" onClick={() => zoomNoCentro(1.3)}>

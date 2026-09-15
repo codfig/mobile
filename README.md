@@ -14,7 +14,8 @@ desfazer encaixe; o anel arrasta só o anel, cada ponta arrasta só ela; pontas
 irmãs se afastam de leve e não trocam de ordem. Um anel só encaixa num gancho da
 mesma forma, e uma ponta terminal só num token da mesma categoria. Um dedo no
 vazio passeia pela sala, dois dedos aproximam; a sala fica presa à janela, e
-nenhuma peça sai dela.
+nenhuma peça sai dela. O interruptor **Gravidade** faz as juntas que chegam a
+uma folha presa descerem e ficarem a prumo sobre o que as segura.
 
 **Verificar** confere a árvore; **Não dá para pendurar** é para os programas de
 fora — o gabarito sai de um reconhecedor, não de marca escrita à mão.
