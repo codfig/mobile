@@ -65,8 +65,10 @@ export const textoDoSimbolo = (s: Simbolo): string =>
  * Quebra um programa em tokens. Os programas dos níveis vêm com espaço entre
  * os tokens, então basta separar por espaço e classificar: um terminal literal
  * da gramática é sua própria categoria; um número vira `num` e um nome vira
- * `id`, se a gramática tiver essas categorias. Qualquer outra coisa fica com
- * uma categoria que nenhum garfo aceita — e o programa, impendurável.
+ * `id`, se a gramática tiver essas categorias. Numa gramática com `atom`, como
+ * a de Lisp, todo o resto é átomo: `car`, `x`, `+`, `1`. Sem nada disso, a
+ * palavra fica com uma categoria que nenhum garfo aceita — e o programa,
+ * impendurável.
  */
 export const lexar = (g: Gramatica, programa: string): ReadonlyArray<Token> =>
   programa
@@ -81,5 +83,7 @@ export const lexar = (g: Gramatica, programa: string): ReadonlyArray<Token> =>
           ? "num"
           : /^[A-Za-z_]\w*$/.test(texto) && g.terminais.includes("id")
             ? "id"
-            : texto
+            : g.terminais.includes("atom")
+              ? "atom"
+              : texto
     }))

@@ -5,8 +5,9 @@ Construtor interativo de árvores de derivação. A ideia está em
 
 ## O que já roda
 
-Três gramáticas, cada uma com sua sala de programas: `aⁿbⁿ`, parênteses
-balanceados e aritmética com precedência (`E → E + T | T`, `T → T * F | F`,
+Quatro gramáticas, cada uma com sua sala de programas: `aⁿbⁿ`, parênteses
+balanceados, expressões-S de Lisp (`S → atom | ( L )`, `L → ε | S L`) e
+aritmética com precedência (`E → E + T | T`, `T → T * F | F`,
 `F → ( E ) | num`). Alguns programas estão fora da gramática, sem aviso.
 
 Um garfo chega solto na sala. O ramo arrasta o que o garfo tem de solto, sem

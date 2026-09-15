@@ -298,6 +298,7 @@ export const Sala = ({
 
                   {regra.corpo.map((s, i) => {
                     const p = posPonta(mundo, cena, g, i)
+                    const preso = g.pontasEm[i]
                     return (
                       <g key={`p-${i}`} className="pega" onPointerDown={(e) => comecar(e, g, { _tag: "Ponta", i })}>
                         <circle cx={p.x} cy={p.y} r={22} className="alvo" />
@@ -308,7 +309,14 @@ export const Sala = ({
                             ε
                           </text>
                         ) : (
-                          <Etiqueta texto={s.categoria} x={p.x} y={p.y} classe="terminal" classeTexto="rotulo-terminal" />
+                          // solta, a etiqueta diz a categoria que aceita; presa, cobre o token e mostra o texto dele
+                          <Etiqueta
+                            texto={preso?._tag === "Token" ? (tokens[preso.i]?.texto ?? s.categoria) : s.categoria}
+                            x={p.x}
+                            y={p.y}
+                            classe="terminal"
+                            classeTexto="rotulo-terminal"
+                          />
                         )}
                       </g>
                     )

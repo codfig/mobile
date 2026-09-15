@@ -31,6 +31,19 @@ export const PARENTESES = definir("parenteses", "Parênteses", [
   ["S", "ε"]
 ])
 
+/**
+ * As expressões-S de Lisp: um átomo, ou uma lista entre parênteses. É a
+ * gramática de parênteses com átomos dentro, e a lista é recursiva à direita
+ * (`L → S L`): a árvore pende para a direita, ao contrário da soma da
+ * aritmética, que pende para a esquerda.
+ */
+export const LISP = definir("lisp", "Lisp", [
+  ["S", "atom"],
+  ["S", "( L )"],
+  ["L", "ε"],
+  ["L", "S L"]
+])
+
 export const ARITMETICA = definir("aritmetica", "Aritmética", [
   ["E", "E + T"],
   ["E", "T"],
@@ -47,6 +60,18 @@ export const ARITMETICA = definir("aritmetica", "Aritmética", [
 export const TRILHAS: ReadonlyArray<Trilha> = [
   trilha(ANBN, ["a b", "a a b b", "a a a b b b", "a a b", "a b a b"]),
   trilha(PARENTESES, ["( )", "( ) ( )", "( ( ) )", ") (", "( ( ) ( ) )", "( ( )"]),
+  trilha(LISP, [
+    "x",
+    "( )",
+    "( car x )",
+    "a b",
+    "( + 1 2 )",
+    "( a ( b ) )",
+    "( car x",
+    "( ( lambda ( x ) x ) 1 )",
+    "( ) )",
+    "( define ( sq x ) ( * x x ) )"
+  ]),
   trilha(ARITMETICA, [
     "2",
     "2 + 3",

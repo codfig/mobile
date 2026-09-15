@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { definir, lexar } from "./gramatica.js"
-import { ANBN, ARITMETICA, PARENTESES, TRILHAS } from "./niveis.js"
+import { ANBN, ARITMETICA, LISP, PARENTESES, TRILHAS } from "./niveis.js"
 import { anulaveis, reconhece } from "./reconhecer.js"
 
 describe("definir", () => {
@@ -37,6 +37,10 @@ describe("lexar", () => {
     expect(lexar(comId, "total = 3").map((t) => t.categoria)).toEqual(["id", "=", "num"])
     expect(lexar(ARITMETICA, "total").map((t) => t.categoria)).toEqual(["total"])
   })
+
+  it("em Lisp, tudo o que nao e parentese e atomo", () => {
+    expect(lexar(LISP, "( + 1 ( car x ) )").map((t) => t.categoria)).toEqual(["(", "atom", "atom", "(", "atom", "atom", ")", ")"])
+  })
 })
 
 describe("reconhece (Earley)", () => {
@@ -67,6 +71,13 @@ describe("reconhece (Earley)", () => {
     expect(cabe(ARITMETICA, "")).toBe(false)
   })
 
+  it("lisp: um atomo ou uma lista, e o programa e uma expressao so", () => {
+    expect(cabe(LISP, "( define ( sq x ) ( * x x ) )")).toBe(true)
+    expect(cabe(LISP, "( )")).toBe(true)
+    expect(cabe(LISP, "a b")).toBe(false)
+    expect(cabe(LISP, "( ) )")).toBe(false)
+  })
+
   it("o gabarito de cada sala confere com a resposta escrita a mao", () => {
     const esperado: Record<string, boolean> = {
       "anbn:a b": true,
@@ -80,6 +91,16 @@ describe("reconhece (Earley)", () => {
       "parenteses:) (": false,
       "parenteses:( ( ) ( ) )": true,
       "parenteses:( ( )": false,
+      "lisp:x": true,
+      "lisp:( )": true,
+      "lisp:( car x )": true,
+      "lisp:a b": false,
+      "lisp:( + 1 2 )": true,
+      "lisp:( a ( b ) )": true,
+      "lisp:( car x": false,
+      "lisp:( ( lambda ( x ) x ) 1 )": true,
+      "lisp:( ) )": false,
+      "lisp:( define ( sq x ) ( * x x ) )": true,
       "aritmetica:2": true,
       "aritmetica:2 + 3": true,
       "aritmetica:2 * 3": true,

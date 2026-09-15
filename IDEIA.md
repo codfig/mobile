@@ -49,16 +49,23 @@ which is the whole point, and is worth protecting as the grammars get bigger.
    of every formal-languages book. Two or three rules, a two-symbol alphabet.
    Here the lesson is just the mechanic: nesting, depth, matching.
 
-2. **Arithmetic with precedence** — `E → E + T | T`, `T → T * F | F`,
+2. **Lisp s-expressions** — `S → atom | ( L )`, `L → ε | S L`. The balanced
+   parentheses grammar with atoms inside, and the first real language: the
+   programs are Lisp the course already teaches, `( define ( sq x ) ( * x x ) )`.
+   Two non-terminals, and the list is right-recursive, so the tree leans
+   **right** — the mirror of arithmetic's left-leaning sums, which come next.
+   It also teaches that a program is *one* expression: `a b` doesn't hang.
+
+3. **Arithmetic with precedence** — `E → E + T | T`, `T → T * F | F`,
    `F → ( E ) | num`. This is where the tree *shape* becomes the lesson: why
    `2 + 3 * 4` can only hang one way, why left recursion leans the tree left,
    what a parenthesis actually buys. The first level that teaches something a
    student can't already see in the source text.
 
-3. **LET**, the first language in Friedman & Wand's *Essentials of Programming
+4. **LET**, the first language in Friedman & Wand's *Essentials of Programming
    Languages* (3rd ed.). Small, real, and has binding structure.
 
-4. **A small ALGOL**, possibly with C's concrete syntax. Statement nesting, and
+5. **A small ALGOL**, possibly with C's concrete syntax. Statement nesting, and
    eventually the dangling `else` — where one token stream hangs two different
    ways and both are legal. Ambiguity stops being a warning in a compiler and
    becomes something you can see with your hands.
@@ -82,7 +89,8 @@ the player builds by hand.
 **Stage 1 — build all of it.** Small to almost-medium trees, few languages, no
 automation. Every fork is hung by hand, including the dull chains like
 `E → T → F`: this is where the mechanic is learned, so nothing is done for the
-player. Languages: the counting grammars and arithmetic with precedence.
+player. Languages: the counting grammars, Lisp s-expressions and arithmetic
+with precedence.
 
 **Stage 2 — decide what matters.** Bigger programs and more languages (LET, the
 small ALGOL). Each level comes with most of the tree already hung and leaves
