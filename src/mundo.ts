@@ -1,5 +1,6 @@
 import { regraDe, type Gramatica, type Regra, type Token } from "./gramatica.js"
 import { dist, type Cena, type Ponto } from "./layout.js"
+import type { No } from "./reconhecer.js"
 
 /**
  * O mundo é uma sacola de garfos soltos.
@@ -362,6 +363,28 @@ export const assentar = (mundo: Mundo, c: Cena, fracao = 1): Mundo => {
     return { ...g, pontas }
   })
   return mexeu ? { garfos } : mundo
+}
+
+// ---- a resposta ----
+
+/**
+ * O mundo com a árvore inteira já pendurada: um garfo por nó, anel no gancho do
+ * pai (o da raiz no teto), cada terminal no seu token e cada ε na sua fresta.
+ * As juntas saem já no lugar em que a gravidade as deixaria.
+ */
+export const pendurarArvore = (c: Cena, raiz: No): Mundo => {
+  const garfos: Garfo[] = []
+  const montar = (no: No, anelEm: Encaixe) => {
+    const g = novoGarfo(no.regra, c.teto)
+    garfos.push({
+      ...g,
+      anelEm,
+      pontasEm: no.filhos.map((f): Preso | null => (f._tag === "No" ? null : { _tag: f._tag, i: f.i }))
+    })
+    no.filhos.forEach((f, i) => f._tag === "No" && montar(f.no, { _tag: "Ponta", garfo: g.id, i }))
+  }
+  montar(raiz, { _tag: "Teto" })
+  return assentar({ garfos }, c)
 }
 
 // ---- encaixar ----

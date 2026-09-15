@@ -8,6 +8,7 @@ import {
   mover,
   mundoVazio,
   novoGarfo,
+  pendurarArvore,
   por,
   tirar,
   verificar,
@@ -16,6 +17,7 @@ import {
   type Veredito
 } from "./mundo.js"
 import { TRILHAS } from "./niveis.js"
+import { derivar } from "./reconhecer.js"
 import { Sala } from "./Sala.jsx"
 
 /** Fração do caminho que cada junta anda por quadro: cai rápido e pousa devagar. */
@@ -229,6 +231,23 @@ export const App = () => {
           }
         >
           Não dá para pendurar
+        </button>
+        <button
+          type="button"
+          className="secundaria"
+          onClick={() => {
+            const arvore = derivar(gramatica, nivel.tokens)
+            inicioDoArrasto.current = null
+            if (arvore === null) {
+              setMundo(mundoVazio)
+              setRecado({ tom: "neutro", texto: "Não há árvore: este programa está fora da gramática." })
+              return
+            }
+            setMundo(pendurarArvore(cena, arvore))
+            setRecado({ tom: "neutro", texto: "Uma árvore para este programa, pendurada." })
+          }}
+        >
+          Resposta
         </button>
         <button
           type="button"

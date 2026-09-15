@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { lexar, regraDe } from "./gramatica.js"
-import { ANBN, ARITMETICA } from "./niveis.js"
+import { ANBN, ARITMETICA, TRILHAS } from "./niveis.js"
+import { derivar } from "./reconhecer.js"
 import { cenaDe, medidas } from "./layout.js"
 import {
   abracoDoRamo,
@@ -9,6 +10,7 @@ import {
   mover,
   mundoVazio,
   novoGarfo,
+  pendurarArvore,
   por,
   posAnel,
   posPonta,
@@ -433,5 +435,27 @@ describe("gravidade", () => {
     for (let k = 0; k < 200; k++) x = assentar(x, cA, 0.2)
     expect(dist(x)).toBe(0)
     expect(assentar(x, cA, 0.2)).toBe(x)
+  })
+})
+
+describe("a resposta", () => {
+  it("em toda sala penduravel, a arvore pendurada passa no Verificar; nas outras nao ha arvore", () => {
+    for (const trilha of TRILHAS) {
+      for (const nivel of trilha.niveis) {
+        const arvore = derivar(trilha.gramatica, nivel.tokens)
+        expect(arvore !== null, nivel.id).toBe(nivel.penduravel)
+        if (arvore === null) continue
+        const cN = cenaDe(medidas(nivel.tokens.length), nivel.tokens.length)
+        const w = pendurarArvore(cN, arvore)
+        expect(verificar(trilha.gramatica, w, nivel.tokens), nivel.id).toEqual({ _tag: "Certo" })
+        // ja assentada: a gravidade nao tem mais o que mexer
+        expect(assentar(w, cN), nivel.id).toBe(w)
+      }
+    }
+  })
+
+  it("respeita precedencia: em 2 + 3 * 4, a raiz e a soma", () => {
+    const toks = lexar(ARITMETICA, "2 + 3 * 4")
+    expect(derivar(ARITMETICA, toks)!.regra.rotulo).toBe("E → E + T")
   })
 })
