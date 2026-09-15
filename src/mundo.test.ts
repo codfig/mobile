@@ -57,6 +57,56 @@ describe("garfo solto no mundo", () => {
   })
 })
 
+describe("pontas em harmonia", () => {
+  it("arrastar uma ponta abre o garfo inteiro por igual, como um leque", () => {
+    const { mundo, id } = trazer(mundoVazio, "r1")
+    const g0 = mundo.garfos.find((x) => x.id === id)!
+    const anel = posAnel(mundo, c, g0)
+    // a ponta "a" sai de (-54, +66) do anel e vai para o dobro disso
+    const w = mover(mundo, c, id, { _tag: "Ponta", i: 0 }, { x: anel.x - 108, y: anel.y + 132 })
+    const g = w.garfos.find((x) => x.id === id)!
+    expect(posPonta(w, c, g, 1).x).toBeCloseTo(anel.x)
+    expect(posPonta(w, c, g, 1).y).toBeCloseTo(anel.y + 132)
+    expect(posPonta(w, c, g, 2).x).toBeCloseTo(anel.x + 108)
+    expect(posPonta(w, c, g, 2).y).toBeCloseTo(anel.y + 132)
+  })
+
+  it("a ponta presa num token fica onde esta", () => {
+    const { mundo, id } = trazer(mundoVazio, "r1")
+    let w = levar(mundo, id, { _tag: "Ponta", i: 0 }, c.token(0))
+    const g0 = w.garfos.find((x) => x.id === id)!
+    w = mover(w, c, id, { _tag: "Ponta", i: 2 }, { x: posPonta(w, c, g0, 2).x + 60, y: 300 })
+    const g = w.garfos.find((x) => x.id === id)!
+    expect(g.pontasEm[0]).toEqual({ _tag: "Token", i: 0 })
+    expect(posPonta(w, c, g, 0)).toEqual(c.token(0))
+  })
+
+  it("puxar a ponta do meio de lado arrasta as outras de lado, sem esmagar", () => {
+    const { mundo, id } = trazer(mundoVazio, "r1")
+    const g0 = mundo.garfos.find((x) => x.id === id)!
+    const antes0 = posPonta(mundo, c, g0, 0)
+    const meio = posPonta(mundo, c, g0, 1)
+    const w = mover(mundo, c, id, { _tag: "Ponta", i: 1 }, { x: meio.x + 30, y: meio.y })
+    const g = w.garfos.find((x) => x.id === id)!
+    expect(posPonta(w, c, g, 0).x).toBeCloseTo(antes0.x + 30)
+    expect(posPonta(w, c, g, 0).y).toBeCloseTo(antes0.y)
+  })
+
+  it("o garfo pendurado numa ponta acompanha quando ela se move", () => {
+    let w = mundoVazio
+    const pai = trazer(w, "r1"); w = pai.mundo
+    const filho = trazer(w, "r1"); w = filho.mundo
+    w = levar(w, filho.id, { _tag: "Anel" }, posPonta(w, c, w.garfos.find((x) => x.id === pai.id)!, 1))
+    const gPai = w.garfos.find((x) => x.id === pai.id)!
+    const anelPai = posAnel(w, c, gPai)
+    w = mover(w, c, pai.id, { _tag: "Ponta", i: 0 }, { x: anelPai.x - 108, y: anelPai.y + 132 })
+    const gPaiDepois = w.garfos.find((x) => x.id === pai.id)!
+    const gFilho = w.garfos.find((x) => x.id === filho.id)!
+    expect(posAnel(w, c, gFilho)).toEqual(posPonta(w, c, gPaiDepois, 1))
+    expect(posAnel(w, c, gFilho).y).toBeCloseTo(anelPai.y + 132)
+  })
+})
+
 describe("encaixar", () => {
   it("o anel largado no gancho do teto se pendura", () => {
     const { mundo, id } = trazer(mundoVazio, "r1")

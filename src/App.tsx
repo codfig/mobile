@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { NIVEIS, REGRAS } from "./gramatica.js"
 import { cenaDe, medidas, type Ponto } from "./layout.js"
 import {
@@ -58,9 +58,19 @@ export const App = () => {
     setRecado(null)
   }
 
-  const aoMover = (garfo: string, parte: Parte, p: Ponto) => setMundo((w) => mover(w, cena, garfo, parte, p))
-  const aoSoltar = (garfo: string, parte: Parte) =>
+  // Todo arrasto é calculado a partir do mundo de quando ele começou.
+  const inicioDoArrasto = useRef<Mundo | null>(null)
+
+  const aoMover = (garfo: string, parte: Parte, p: Ponto) =>
+    setMundo((w) => {
+      if (inicioDoArrasto.current === null) inicioDoArrasto.current = w
+      return mover(inicioDoArrasto.current, cena, garfo, parte, p)
+    })
+
+  const aoSoltar = (garfo: string, parte: Parte) => {
+    inicioDoArrasto.current = null
     setMundo((w) => encaixar(w, cena, nivel.tokens, garfo, parte))
+  }
 
   return (
     <main className="app">
@@ -78,8 +88,8 @@ export const App = () => {
       </nav>
 
       <p className="dica">
-        Arraste o <strong>anel</strong> até um gancho, e cada <strong>ponta</strong> até o token dela. Arraste o{" "}
-        <strong>ramo</strong> para mover o garfo inteiro.
+        Arraste o <strong>anel</strong> até um gancho, e cada <strong>ponta</strong> até o token dela — as outras
+        pontas acompanham. Arraste o <strong>ramo</strong> para mover o garfo inteiro.
       </p>
 
       <Sala mundo={mundo} cena={cena} m={m} tokens={nivel.tokens} aoMover={aoMover} aoSoltar={aoSoltar} />

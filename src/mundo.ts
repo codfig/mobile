@@ -128,19 +128,57 @@ export const moverCorpo = (mundo: Mundo, c: Cena, id: string, destino: Ponto): M
 export const moverAnel = (mundo: Mundo, id: string, p: Ponto): Mundo =>
   trocar(mundo, id, (g) => ({ ...g, anel: p, anelEm: null }))
 
-export const moverPonta = (mundo: Mundo, id: string, i: number, p: Ponto): Mundo =>
-  trocar(mundo, id, (g) => ({
-    ...g,
-    pontas: g.pontas.map((q, j) => (j === i ? p : q)),
-    pontasEm: g.pontasEm.map((q, j) => (j === i ? null : q))
+/** Quanto a ponta arrastada andou num eixo, visto a partir do anel. */
+type Eixo = { readonly _tag: "Escala"; readonly k: number } | { readonly _tag: "Desloca"; readonly d: number }
+
+const QUASE_ZERO = 6
+const ESCALA_MINIMA = 0.1
+
+const eixo = (antes: number, depois: number): Eixo =>
+  // Uma ponta bem embaixo do anel não tem largura para escalar: aí o eixo desloca.
+  Math.abs(antes) < QUASE_ZERO
+    ? { _tag: "Desloca", d: depois - antes }
+    : { _tag: "Escala", k: Math.max(ESCALA_MINIMA, depois / antes) }
+
+const aplicar = (v: number, e: Eixo): number => (e._tag === "Escala" ? v * e.k : v + e.d)
+
+/**
+ * Arrastar uma ponta leva as outras junto, em harmonia: o garfo abre e fecha
+ * como um leque preso no anel. O quanto a ponta arrastada se afastou do anel,
+ * em cada eixo, é o quanto todas as pontas soltas se afastam.
+ *
+ * Ponta presa num token não se mexe — o chão a segura. E o que estiver
+ * pendurado nas pontas vem junto, porque a posição dos filhos é lida delas.
+ *
+ * Deve ser chamada sempre a partir do mundo do começo do arrasto, não do
+ * quadro anterior: escalar em cima de escala acumula erro e, com o limite
+ * mínimo, deformaria o leque sem volta.
+ */
+export const moverPonta = (mundo: Mundo, c: Cena, id: string, i: number, p: Ponto): Mundo => {
+  const g = achar(mundo, id)
+  if (g === undefined) return mundo
+  const anel = posAnel(mundo, c, g)
+  const antes = posPonta(mundo, c, g, i)
+  const ex = eixo(antes.x - anel.x, p.x - anel.x)
+  const ey = eixo(antes.y - anel.y, p.y - anel.y)
+  return trocar(mundo, id, (x) => ({
+    ...x,
+    pontas: x.pontas.map((q, j) => {
+      if (j === i) return p
+      if (x.pontasEm[j] != null) return q
+      const atual = posPonta(mundo, c, x, j)
+      return { x: anel.x + aplicar(atual.x - anel.x, ex), y: anel.y + aplicar(atual.y - anel.y, ey) }
+    }),
+    pontasEm: x.pontasEm.map((q, j) => (j === i ? null : q))
   }))
+}
 
 export const mover = (mundo: Mundo, c: Cena, id: string, parte: Parte, p: Ponto): Mundo =>
   parte._tag === "Corpo"
     ? moverCorpo(mundo, c, id, p)
     : parte._tag === "Anel"
       ? moverAnel(mundo, id, p)
-      : moverPonta(mundo, id, parte.i, p)
+      : moverPonta(mundo, c, id, parte.i, p)
 
 // ---- encaixar ----
 
