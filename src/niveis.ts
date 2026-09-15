@@ -70,6 +70,24 @@ export const LET = definir("let", "LET", [
 ])
 
 /**
+ * Um ALGOL pequeno: comandos com `if`, atribuição e blocos `begin … end`.
+ * O `if` sem `else` e o `if` com `else` convivem, e é isso que deixa o `else`
+ * pendente: em `if a then if b then x := 1 else x := 2`, o `else` pode ser do
+ * `if` de dentro ou do de fora. O mesmo chão pendura de dois jeitos, e os dois
+ * são certos. `begin … end` é como o programador escolhe um deles.
+ */
+export const ALGOL = definir("algol", "ALGOL", [
+  ["S", "if E then S"],
+  ["S", "if E then S else S"],
+  ["S", "id := E"],
+  ["S", "begin L end"],
+  ["L", "S"],
+  ["L", "L ; S"],
+  ["E", "id"],
+  ["E", "num"]
+])
+
+/**
  * As salas. Os programas fora da gramática ficam misturados aos outros, sem
  * marca: descobrir que um deles não pendura faz parte do exercício.
  */
@@ -112,5 +130,17 @@ export const TRILHAS: ReadonlyArray<Trilha> = [
     "let x = 7 in let y = 2 in - ( x , y )",
     "if x then 1",
     "let x = 3 in let y = - ( x , 1 ) in - ( x , y )"
+  ]),
+  trilha(ALGOL, [
+    "x := 1",
+    "begin x := 1 end",
+    "if a then x := 1",
+    "x := 1 ; y := 2",
+    "if a then x := 1 else x := 2",
+    "begin x := 1 ; y := 2 end",
+    "if a then else x := 1",
+    "if a then if b then x := 1 else x := 2",
+    "begin x := 1 ; end",
+    "if a then begin if b then x := 1 end else x := 2"
   ])
 ]

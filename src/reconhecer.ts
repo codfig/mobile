@@ -83,14 +83,25 @@ export type Filho =
   /** O ε pousa na fresta antes do token `i`. */
   | { readonly _tag: "Fresta"; readonly i: number }
 
+/** Os nós abertos acima do atual, do mais perto ao mais longe. */
+type Caminho = { readonly chave: string; readonly acima: Caminho } | null
+
+const noCaminho = (c: Caminho, chave: string): boolean => {
+  for (let k = c; k !== null; k = k.acima) if (k.chave === chave) return true
+  return false
+}
+
 /**
- * Uma árvore de derivação do programa, ou null se ele está fora da gramática.
- * Com gramática ambígua, devolve uma das árvores.
+ * As árvores de derivação do programa, no máximo `limite` delas; nenhuma se ele
+ * está fora da gramática. Mais de uma quer dizer que o programa é ambíguo: o
+ * mesmo chão pendura de dois jeitos, como no `else` pendente.
  *
- * Sai dos mesmos conjuntos do reconhecedor: uma produção completa de `i` a `j`
- * é um nó possível, e basta repartir o trecho entre os símbolos do corpo.
+ * Saem dos mesmos conjuntos do reconhecedor: uma produção completa de `i` a `j`
+ * é um nó possível, e basta repartir o trecho entre os símbolos do corpo, de
+ * todos os jeitos que derem. Árvores diferentes vêm de escolhas diferentes, então
+ * nenhuma sai repetida.
  */
-export const derivar = (g: Gramatica, tokens: ReadonlyArray<Token>): No | null => {
+export const derivacoes = (g: Gramatica, tokens: ReadonlyArray<Token>, limite: number): ReadonlyArray<No> => {
   const conjuntos = earley(g, tokens)
   // completas[j] guarda "regra:origem" de toda produção que termina depois do token j
   const completas = conjuntos.map(
@@ -98,43 +109,48 @@ export const derivar = (g: Gramatica, tokens: ReadonlyArray<Token>): No | null =
       new Set(conjunto.filter((it) => it.p === g.regras[it.r]!.corpo.length).map((it) => `${it.r}:${it.o}`))
   )
 
-  // o nó em construção não pode reaparecer dentro de si no mesmo trecho: evita laço em A → A
-  const abertos = new Set<string>()
-
-  const no = (cabeca: string, i: number, j: number): No | null => {
+  // Um nó não pode reaparecer dentro de si no mesmo trecho, senão A → A daria
+  // árvores sem fim. Só os de cima contam: um irmão igual ao lado é outra coisa.
+  function* no(cabeca: string, i: number, j: number, caminho: Caminho): Generator<No> {
     for (let ri = 0; ri < g.regras.length; ri++) {
       const regra = g.regras[ri]!
       const chave = `${ri}:${i}:${j}`
-      if (regra.cabeca !== cabeca || !completas[j]!.has(`${ri}:${i}`) || abertos.has(chave)) continue
-      abertos.add(chave)
-      const filhos = corpo(regra, 0, i, j)
-      abertos.delete(chave)
-      if (filhos !== null) return { regra, filhos }
+      if (regra.cabeca !== cabeca || !completas[j]!.has(`${ri}:${i}`) || noCaminho(caminho, chave)) continue
+      for (const filhos of corpo(regra, 0, i, j, { chave, acima: caminho })) yield { regra, filhos }
     }
-    return null
   }
 
   // reparte o trecho [k, j] entre os símbolos do corpo a partir de `s`
-  const corpo = (regra: Regra, s: number, k: number, j: number): Filho[] | null => {
+  function* corpo(regra: Regra, s: number, k: number, j: number, caminho: Caminho): Generator<Filho[]> {
     const simbolo = regra.corpo[s]
-    if (simbolo === undefined) return k === j ? [] : null
+    if (simbolo === undefined) {
+      if (k === j) yield []
+      return
+    }
     if (simbolo.tipo === "vazio") {
-      const resto = corpo(regra, s + 1, k, j)
-      return resto === null ? null : [{ _tag: "Fresta", i: k }, ...resto]
+      for (const resto of corpo(regra, s + 1, k, j, caminho)) yield [{ _tag: "Fresta", i: k }, ...resto]
+      return
     }
     if (simbolo.tipo === "terminal") {
-      if (k >= j || tokens[k]!.categoria !== simbolo.categoria) return null
-      const resto = corpo(regra, s + 1, k + 1, j)
-      return resto === null ? null : [{ _tag: "Token", i: k }, ...resto]
+      if (k >= j || tokens[k]!.categoria !== simbolo.categoria) return
+      for (const resto of corpo(regra, s + 1, k + 1, j, caminho)) yield [{ _tag: "Token", i: k }, ...resto]
+      return
     }
     for (let fim = k; fim <= j; fim++) {
-      const sub = no(simbolo.nome, k, fim)
-      if (sub === null) continue
-      const resto = corpo(regra, s + 1, fim, j)
-      if (resto !== null) return [{ _tag: "No", no: sub }, ...resto]
+      for (const sub of no(simbolo.nome, k, fim, caminho)) {
+        for (const resto of corpo(regra, s + 1, fim, j, caminho)) yield [{ _tag: "No", no: sub }, ...resto]
+      }
     }
-    return null
   }
 
-  return no(g.inicio, 0, tokens.length)
+  const achadas: No[] = []
+  if (limite < 1) return achadas
+  for (const arvore of no(g.inicio, 0, tokens.length, null)) {
+    achadas.push(arvore)
+    if (achadas.length >= limite) break
+  }
+  return achadas
 }
+
+/** Uma árvore de derivação do programa, ou null se ele está fora da gramática. */
+export const derivar = (g: Gramatica, tokens: ReadonlyArray<Token>): No | null => derivacoes(g, tokens, 1)[0] ?? null

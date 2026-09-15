@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { lexar, regraDe } from "./gramatica.js"
-import { ANBN, ARITMETICA, TRILHAS } from "./niveis.js"
-import { derivar } from "./reconhecer.js"
+import { ALGOL, ANBN, ARITMETICA, TRILHAS } from "./niveis.js"
+import { derivacoes, derivar } from "./reconhecer.js"
 import { cenaDe, medidas } from "./layout.js"
 import {
   abracoDoRamo,
@@ -467,6 +467,14 @@ describe("a resposta", () => {
         // ja assentada: a gravidade nao tem mais o que mexer
         expect(assentar(w, cN), nivel.id).toBe(w)
       }
+    }
+  })
+
+  it("as duas arvores do else pendente passam no Verificar", () => {
+    const toks = lexar(ALGOL, "if a then if b then x := 1 else x := 2")
+    const cN = cenaDe(medidas(toks.length), toks.length)
+    for (const arvore of derivacoes(ALGOL, toks, 10)) {
+      expect(verificar(ALGOL, pendurarArvore(cN, arvore), toks)).toEqual({ _tag: "Certo" })
     }
   })
 

@@ -17,11 +17,14 @@ import {
   type Veredito
 } from "./mundo.js"
 import { ARITMETICA, TRILHAS } from "./niveis.js"
-import { derivar } from "./reconhecer.js"
+import { derivacoes } from "./reconhecer.js"
 import { Sala } from "./Sala.jsx"
 
 /** Fração do caminho que cada junta anda por quadro: cai rápido e pousa devagar. */
 const PASSO_DA_GRAVIDADE = 0.16
+
+/** Quantas árvores de um programa se procuram, no máximo. */
+const LIMITE_DE_ARVORES = 4
 
 type Recado = { readonly tom: "bom" | "ruim" | "neutro"; readonly texto: string }
 
@@ -100,12 +103,18 @@ export const App = () => {
   const m = useMemo(() => medidas(nivel.tokens.length), [nivel])
   const cena = useMemo(() => cenaDe(m, nivel.tokens.length), [m, nivel])
 
+  // Até LIMITE_DE_ARVORES: mais de uma já diz que o programa é ambíguo.
+  const arvores = useMemo(() => derivacoes(gramatica, nivel.tokens, LIMITE_DE_ARVORES), [gramatica, nivel])
+  const quantasArvores = arvores.length >= LIMITE_DE_ARVORES ? `${LIMITE_DE_ARVORES} ou mais` : `${arvores.length}`
+  const [iResposta, setIResposta] = useState(0)
+
   const irPara = (t: number, n: number) => {
     setITrilha(t)
     setINivel(n)
     setMundo(mundoVazio)
     setCamera(null)
     setRecado(null)
+    setIResposta(0)
   }
 
   const trazer = (regra: Regra) => {
@@ -226,7 +235,18 @@ export const App = () => {
       {recado !== null && <p className={`recado ${recado.tom}`}>{recado.texto}</p>}
 
       <section className="acoes">
-        <button type="button" className="principal" onClick={() => setRecado(recadoDoVeredito(verificar(gramatica, mundo, nivel.tokens)))}>
+        <button
+          type="button"
+          className="principal"
+          onClick={() => {
+            const veredito = verificar(gramatica, mundo, nivel.tokens)
+            setRecado(
+              veredito._tag === "Certo" && arvores.length > 1
+                ? { tom: "bom", texto: `Pendurada. Mas este programa pendura de ${quantasArvores} jeitos, todos certos: tente outro.` }
+                : recadoDoVeredito(veredito)
+            )
+          }}
+        >
           Verificar
         </button>
         <button
@@ -246,15 +266,24 @@ export const App = () => {
           type="button"
           className="secundaria"
           onClick={() => {
-            const arvore = derivar(gramatica, nivel.tokens)
             inicioDoArrasto.current = null
-            if (arvore === null) {
+            if (arvores.length === 0) {
               setMundo(mundoVazio)
               setRecado({ tom: "neutro", texto: "Não há árvore: este programa está fora da gramática." })
               return
             }
-            setMundo(pendurarArvore(cena, arvore))
-            setRecado({ tom: "neutro", texto: "Uma árvore para este programa, pendurada." })
+            // num programa ambíguo, cada toque pendura a próxima árvore
+            const vez = iResposta % arvores.length
+            setMundo(pendurarArvore(cena, arvores[vez]!))
+            setIResposta(vez + 1)
+            setRecado(
+              arvores.length === 1
+                ? { tom: "neutro", texto: "Uma árvore para este programa, pendurada." }
+                : {
+                    tom: "neutro",
+                    texto: `Árvore ${vez + 1} de ${quantasArvores}: este programa pendura de mais de um jeito. Toque de novo para ver ${vez + 1 === arvores.length ? "a primeira" : "a próxima"}.`
+                  }
+            )
           }}
         >
           Resposta

@@ -76,6 +76,13 @@ which is the whole point, and is worth protecting as the grammars get bigger.
    ways and both are legal. Ambiguity stops being a warning in a compiler and
    becomes something you can see with your hands.
 
+   Built with ALGOL's syntax rather than C's: `if E then S [else S]`,
+   `id := E`, `begin S ; … end`. The parser enumerates every tree, not just
+   one, so the game knows when a program is ambiguous. **Verificar** accepts
+   either hanging and says there is another; **Resposta** shows the trees one
+   per press ("Árvore 1 de 2"). The room right after the ambiguous one wraps the
+   inner `if` in `begin … end` — which is how a programmer picks one of them.
+
 *Considered and dropped: Forth.* Its grammar is effectively `program → word*` —
 a flat tree with no shape to discover. Forth teaches the **stack**, which is
 semantics, not syntax, and it is already taught that way elsewhere in the

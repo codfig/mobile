@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { definir, lexar } from "./gramatica.js"
-import { ANBN, ARITMETICA, LET, LISP, PARENTESES, TRILHAS } from "./niveis.js"
-import { anulaveis, reconhece } from "./reconhecer.js"
+import { ALGOL, ANBN, ARITMETICA, LET, LISP, PARENTESES, TRILHAS } from "./niveis.js"
+import { anulaveis, derivacoes, reconhece } from "./reconhecer.js"
 
 describe("definir", () => {
   it("toda cabeca e nao-terminal, o resto e terminal, a primeira cabeca e o inicio", () => {
@@ -91,6 +91,12 @@ describe("reconhece (Earley)", () => {
     expect(cabe(LET, "let x = in x")).toBe(false)
   })
 
+  it("algol: sequencia so dentro de begin, e ; nao fecha bloco", () => {
+    expect(cabe(ALGOL, "begin x := 1 ; y := 2 end")).toBe(true)
+    expect(cabe(ALGOL, "x := 1 ; y := 2")).toBe(false)
+    expect(cabe(ALGOL, "begin x := 1 ; end")).toBe(false)
+  })
+
   it("o gabarito de cada sala confere com a resposta escrita a mao", () => {
     const esperado: Record<string, boolean> = {
       "anbn:a b": true,
@@ -134,10 +140,42 @@ describe("reconhece (Earley)", () => {
       "let:let x = in x": false,
       "let:let x = 7 in let y = 2 in - ( x , y )": true,
       "let:if x then 1": false,
-      "let:let x = 3 in let y = - ( x , 1 ) in - ( x , y )": true
+      "let:let x = 3 in let y = - ( x , 1 ) in - ( x , y )": true,
+      "algol:x := 1": true,
+      "algol:begin x := 1 end": true,
+      "algol:if a then x := 1": true,
+      "algol:x := 1 ; y := 2": false,
+      "algol:if a then x := 1 else x := 2": true,
+      "algol:begin x := 1 ; y := 2 end": true,
+      "algol:if a then else x := 1": false,
+      "algol:if a then if b then x := 1 else x := 2": true,
+      "algol:begin x := 1 ; end": false,
+      "algol:if a then begin if b then x := 1 end else x := 2": true
     }
     const niveis = TRILHAS.flatMap((t) => t.niveis)
     expect(niveis.map((n) => n.id).sort()).toEqual(Object.keys(esperado).sort())
     for (const n of niveis) expect([n.id, n.penduravel]).toEqual([n.id, esperado[n.id]])
+  })
+})
+
+describe("derivacoes: quantas arvores", () => {
+  it("o else pendente pendura de dois jeitos: o else e do if de fora ou do de dentro", () => {
+    const arvores = derivacoes(ALGOL, lexar(ALGOL, "if a then if b then x := 1 else x := 2"), 10)
+    expect(arvores).toHaveLength(2)
+    expect(arvores.map((a) => a.regra.rotulo).sort()).toEqual(["S → if E then S", "S → if E then S else S"])
+  })
+
+  it("begin … end escolhe um dos jeitos", () => {
+    expect(derivacoes(ALGOL, lexar(ALGOL, "if a then begin if b then x := 1 end else x := 2"), 10)).toHaveLength(1)
+  })
+
+  it("fora o else pendente, toda sala de toda trilha tem uma arvore so, ou nenhuma", () => {
+    for (const t of TRILHAS) {
+      for (const n of t.niveis) {
+        const quantas = derivacoes(t.gramatica, n.tokens, 3).length
+        const esperado = n.id === "algol:if a then if b then x := 1 else x := 2" ? 2 : n.penduravel ? 1 : 0
+        expect([n.id, quantas]).toEqual([n.id, esperado])
+      }
+    }
   })
 })
