@@ -245,8 +245,8 @@ export const mover = (mundo: Mundo, c: Cena, id: string, parte: Parte, p: Ponto)
 
 /** Quanto o ramo passa da peça mais de fora da subárvore. */
 const FOLGA_DO_ABRACO = 18
-/** Ponta a menos que isto do anel, na horizontal, desce reta: não há lado para abraçar. */
-const PRUMO = 6
+/** O ramo passa da ponta, para fora, no máximo esta fração da altura dele. */
+const ALCANCE_POR_ALTURA = 0.5
 
 export type Abraco = {
   /** Até que x os pontos de controle da curva vão buscar. */
@@ -256,24 +256,34 @@ export type Abraco = {
 }
 
 /**
- * Um ramo com garfos pendurados na ponta se abre para fora e abraça a subárvore
- * inteira: a curva vai buscar a peça mais de fora dela, do lado para onde o ramo
- * já pende. Quanto mais garfos embaixo, mais forte — um só abre metade, e cada
- * garfo a mais fecha metade do que falta.
+ * Um garfo com garfos pendurados abraça tudo o que pende dele. Só o primeiro e
+ * o último ramo abraçam — o primeiro pela esquerda, o último pela direita —, e
+ * a curva vai buscar a peça mais de fora da subárvore naquele lado. Ramo do
+ * meio nunca abre: em `F → ( E )`, o E desce sem se entortar, e os parênteses,
+ * que já estão por fora, saem do anel para fora e descem até o token por fora
+ * da subárvore. Garfo de um ramo só não tem dois lados, então não abraça.
+ *
+ * Quanto mais garfos embaixo, mais forte: um só abre metade, e cada garfo a
+ * mais fecha metade do que falta.
  */
 export const abracoDoRamo = (mundo: Mundo, c: Cena, g: Garfo, i: number): Abraco | null => {
-  const filho = mundo.garfos.find((x) => x.anelEm?._tag === "Ponta" && x.anelEm.garfo === g.id && x.anelEm.i === i)
-  if (filho === undefined) return null
-  const anel = posAnel(mundo, c, g)
-  const ponta = posPonta(mundo, c, g, i)
-  const lado = ponta.x < anel.x - PRUMO ? -1 : ponta.x > anel.x + PRUMO ? 1 : 0
-  if (lado === 0) return null
+  const n = g.pontas.length
+  if (n < 2 || (i !== 0 && i !== n - 1)) return null
+  const subarvore = pendentes(mundo, g.id)
+  const embaixo = mundo.garfos.filter((x) => x.id !== g.id && subarvore.has(x.id))
+  if (embaixo.length === 0) return null
 
-  const subarvore = pendentes(mundo, filho.id)
-  const embaixo = mundo.garfos.filter((x) => subarvore.has(x.id))
+  const ponta = posPonta(mundo, c, g, i)
+  // ramo curto não dá a volta: o quanto passa da ponta é limitado pela altura dele
+  const alcance = ALCANCE_POR_ALTURA * Math.abs(ponta.y - posAnel(mundo, c, g).y)
   const xs = embaixo.flatMap((x) => [posAnel(mundo, c, x).x, ...x.pontas.map((_, j) => posPonta(mundo, c, x, j).x)])
-  const borda = lado < 0 ? Math.min(ponta.x, Math.min(...xs) - FOLGA_DO_ABRACO) : Math.max(ponta.x, Math.max(...xs) + FOLGA_DO_ABRACO)
-  return borda === ponta.x ? null : { borda, forca: 1 - 0.5 ** embaixo.length }
+  // Ponta que já está por fora fica com a borda nela mesma: o ramo sai do anel
+  // para fora e desce a prumo até ela, sem cortar a subárvore nem passar dela.
+  const borda =
+    i === 0
+      ? Math.max(ponta.x - alcance, Math.min(ponta.x, Math.min(...xs) - FOLGA_DO_ABRACO))
+      : Math.min(ponta.x + alcance, Math.max(ponta.x, Math.max(...xs) + FOLGA_DO_ABRACO))
+  return { borda, forca: 1 - 0.5 ** embaixo.length }
 }
 
 // ---- gravidade ----

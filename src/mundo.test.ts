@@ -301,24 +301,61 @@ describe("o abraco dos ramos", () => {
     expect(abracoDoRamo(mundo, c, acharG(mundo, id), 0)).toBeNull()
   })
 
-  it("abre para fora da subarvore, e mais forte com mais garfos embaixo", () => {
-    // pai S → a S b solto; a ponta S dele puxada para a esquerda, com filhos pendurados em cadeia
+  /** Pai S → a S b com um filho igual pendurado no S; as pontas do filho abertas para além das do pai. */
+  const paiComFilhoLargo = () => {
     let w = mundoVazio
     const pai = trazer(w, "r1"); w = pai.mundo
-    const anelPai = posAnel(w, c, acharG(w, pai.id))
-    w = mover(w, c, pai.id, { _tag: "Ponta", i: 1 }, { x: anelPai.x - 60, y: anelPai.y + 80 })
-    const um = trazer(w, "r1"); w = um.mundo
-    w = levar(w, um.id, { _tag: "Anel" }, posPonta(w, c, acharG(w, pai.id), 1))
-    const comUm = abracoDoRamo(w, c, acharG(w, pai.id), 1)!
-    const ponta = posPonta(w, c, acharG(w, pai.id), 1)
-    const pecasDoFilho = [posAnel(w, c, acharG(w, um.id)), ...[0, 1, 2].map((j) => posPonta(w, c, acharG(w, um.id), j))]
-    expect(comUm.borda).toBeLessThan(Math.min(...pecasDoFilho.map((p) => p.x)))
-    expect(comUm.borda).toBeLessThan(ponta.x)
+    const filho = trazer(w, "r1"); w = filho.mundo
+    w = levar(w, filho.id, { _tag: "Anel" }, posPonta(w, c, acharG(w, pai.id), 1))
+    const pontasPai = [0, 2].map((j) => posPonta(w, c, acharG(w, pai.id), j))
+    w = mover(w, c, filho.id, { _tag: "Ponta", i: 0 }, { x: pontasPai[0]!.x - 50, y: 260 })
+    w = mover(w, c, filho.id, { _tag: "Ponta", i: 2 }, { x: pontasPai[1]!.x + 50, y: 260 })
+    return { w, pai: pai.id, filho: filho.id }
+  }
 
-    const dois = trazer(w, "r2"); w = dois.mundo
-    w = levar(w, dois.id, { _tag: "Anel" }, posPonta(w, c, acharG(w, um.id), 1))
-    const comDois = abracoDoRamo(w, c, acharG(w, pai.id), 1)!
-    expect(comDois.forca).toBeGreaterThan(comUm.forca)
+  it("o primeiro ramo abraca pela esquerda e o ultimo pela direita, alem da subarvore", () => {
+    const { w: curto, pai, filho } = paiComFilhoLargo()
+    // pontas do pai bem mais baixas, para o ramo ter altura de sobra
+    const anel = posAnel(curto, c, acharG(curto, pai))
+    let w = mover(curto, c, pai, { _tag: "Ponta", i: 0 }, { x: posPonta(curto, c, acharG(curto, pai), 0).x, y: anel.y + 300 })
+    w = mover(w, c, pai, { _tag: "Ponta", i: 2 }, { x: posPonta(w, c, acharG(w, pai), 2).x, y: anel.y + 300 })
+    const xsFilho = [0, 1, 2].map((j) => posPonta(w, c, acharG(w, filho), j).x)
+    expect(abracoDoRamo(w, c, acharG(w, pai), 0)!.borda).toBeLessThan(Math.min(...xsFilho))
+    expect(abracoDoRamo(w, c, acharG(w, pai), 2)!.borda).toBeGreaterThan(Math.max(...xsFilho))
+  })
+
+  it("o ramo do meio nunca abre, mesmo fora de prumo e com a subarvore toda nele", () => {
+    const { w, pai } = paiComFilhoLargo()
+    const anel = posAnel(w, c, acharG(w, pai))
+    const torto = mover(w, c, pai, { _tag: "Ponta", i: 1 }, { x: anel.x - 40, y: anel.y + 90 })
+    expect(abracoDoRamo(torto, c, acharG(torto, pai), 1)).toBeNull()
+  })
+
+  it("ramo que ja esta por fora da subarvore chega a ponta a prumo, sem passar dela", () => {
+    // o filho fica estreito, entre as pontas do pai: como os parenteses de F → ( E )
+    let w = mundoVazio
+    const pai = trazer(w, "r1"); w = pai.mundo
+    const filho = trazer(w, "r2"); w = filho.mundo
+    w = levar(w, filho.id, { _tag: "Anel" }, posPonta(w, c, acharG(w, pai.id), 1))
+    const g = acharG(w, pai.id)
+    expect(abracoDoRamo(w, c, g, 0)!.borda).toBe(posPonta(w, c, g, 0).x)
+    expect(abracoDoRamo(w, c, g, 2)!.borda).toBe(posPonta(w, c, g, 2).x)
+  })
+
+  it("ramo curto nao da a volta: passa da ponta no maximo metade da altura", () => {
+    const { w, pai } = paiComFilhoLargo()
+    const g = acharG(w, pai)
+    const anel = posAnel(w, c, g)
+    const ponta = posPonta(w, c, g, 0)
+    const abraco = abracoDoRamo(w, c, g, 0)!
+    expect(ponta.x - abraco.borda).toBeLessThanOrEqual(0.5 * Math.abs(ponta.y - anel.y) + 1e-9)
+  })
+
+  it("mais garfos embaixo, abraco mais forte", () => {
+    const { w: w1, pai, filho } = paiComFilhoLargo()
+    const neto = trazer(w1, "r2")
+    const w2 = levar(neto.mundo, neto.id, { _tag: "Anel" }, posPonta(neto.mundo, c, acharG(neto.mundo, filho), 1))
+    expect(abracoDoRamo(w2, c, acharG(w2, pai), 0)!.forca).toBeGreaterThan(abracoDoRamo(w1, c, acharG(w1, pai), 0)!.forca)
   })
 })
 
