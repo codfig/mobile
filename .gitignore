@@ -23,3 +23,7 @@ out/
 *.log
 *.tmp
 *.bak
+
+# ---- Dependencias e caches de build ----
+node_modules/
+*.tsbuildinfo
