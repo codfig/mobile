@@ -29,13 +29,23 @@ export const Forma = ({ indice, x, y, r, classe }: { indice: number; x: number; 
 }
 
 /**
- * O ramo de um garfo, do anel até uma ponta. Sai do anel descendo a prumo e
- * chega à ponta descendo a prumo, com a curva no meio; ponta bem embaixo do
- * anel dá reta.
+ * O ramo de um garfo, do anel até uma ponta. Sozinho, sai do anel descendo a
+ * prumo e chega à ponta descendo a prumo, com a curva no meio; ponta bem embaixo
+ * do anel dá reta. Com `abraco`, os pontos de controle andam para fora, até a
+ * borda, e sobem o primeiro e descem o segundo: o ramo sai do anel já se abrindo
+ * e chega à ponta por cima, em arco sobre o que pende dele, sem dar volta de lado.
  */
-export const curvaDoRamo = (x1: number, y1: number, x2: number, y2: number): string => {
-  const meio = (y1 + y2) / 2
-  return `M ${x1} ${y1} C ${x1} ${meio} ${x2} ${meio} ${x2} ${y2}`
+export const curvaDoRamo = (
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  abraco: { readonly borda: number; readonly forca: number } | null = null
+): string => {
+  const f = abraco?.forca ?? 0
+  const puxar = (x: number) => (abraco === null ? x : x + (abraco.borda - x) * f)
+  const altura = (fracao: number) => y1 + (y2 - y1) * fracao
+  return `M ${x1} ${y1} C ${puxar(x1)} ${altura(0.5 - 0.4 * f)} ${puxar(x2)} ${altura(0.5 + 0.1 * f)} ${x2} ${y2}`
 }
 
 /** Forma do não-terminal com o nome dele dentro. */

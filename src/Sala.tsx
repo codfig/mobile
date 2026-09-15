@@ -14,6 +14,7 @@ import {
   type Ponto
 } from "./layout.js"
 import {
+  abracoDoRamo,
   encaixesLivres,
   pendentes,
   posAnel,
@@ -267,7 +268,7 @@ export const Sala = ({
                 <g key={g.id} className={arrasto?.garfo === g.id ? "garfo-mundo movendo" : "garfo-mundo"}>
                   {regra.corpo.map((s, i) => {
                     const p = posPonta(mundo, cena, g, i)
-                    const d = curvaDoRamo(anel.x, anel.y, p.x, p.y)
+                    const d = curvaDoRamo(anel.x, anel.y, p.x, p.y, abracoDoRamo(mundo, cena, g, i))
                     return (
                       <g key={`r-${i}`}>
                         <path d={d} className={s.tipo === "vazio" ? "ramo vazio" : "ramo"} />

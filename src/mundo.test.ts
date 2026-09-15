@@ -3,6 +3,7 @@ import { lexar, regraDe } from "./gramatica.js"
 import { ANBN, ARITMETICA } from "./niveis.js"
 import { cenaDe, medidas } from "./layout.js"
 import {
+  abracoDoRamo,
   assentar,
   encaixar,
   mover,
@@ -289,6 +290,35 @@ describe("gramatica com varios nao-terminais", () => {
     w = levarA(w, f.id, { _tag: "Ponta", i: 0 }, cA.token(0))
 
     expect(verificar(ARITMETICA, w, toks)).toEqual({ _tag: "Certo" })
+  })
+})
+
+describe("o abraco dos ramos", () => {
+  const acharG = (w: Mundo, id: string) => w.garfos.find((x) => x.id === id)!
+
+  it("ramo sem nada pendurado nao abraca", () => {
+    const { mundo, id } = trazer(mundoVazio, "r1")
+    expect(abracoDoRamo(mundo, c, acharG(mundo, id), 0)).toBeNull()
+  })
+
+  it("abre para fora da subarvore, e mais forte com mais garfos embaixo", () => {
+    // pai S → a S b solto; a ponta S dele puxada para a esquerda, com filhos pendurados em cadeia
+    let w = mundoVazio
+    const pai = trazer(w, "r1"); w = pai.mundo
+    const anelPai = posAnel(w, c, acharG(w, pai.id))
+    w = mover(w, c, pai.id, { _tag: "Ponta", i: 1 }, { x: anelPai.x - 60, y: anelPai.y + 80 })
+    const um = trazer(w, "r1"); w = um.mundo
+    w = levar(w, um.id, { _tag: "Anel" }, posPonta(w, c, acharG(w, pai.id), 1))
+    const comUm = abracoDoRamo(w, c, acharG(w, pai.id), 1)!
+    const ponta = posPonta(w, c, acharG(w, pai.id), 1)
+    const pecasDoFilho = [posAnel(w, c, acharG(w, um.id)), ...[0, 1, 2].map((j) => posPonta(w, c, acharG(w, um.id), j))]
+    expect(comUm.borda).toBeLessThan(Math.min(...pecasDoFilho.map((p) => p.x)))
+    expect(comUm.borda).toBeLessThan(ponta.x)
+
+    const dois = trazer(w, "r2"); w = dois.mundo
+    w = levar(w, dois.id, { _tag: "Anel" }, posPonta(w, c, acharG(w, um.id), 1))
+    const comDois = abracoDoRamo(w, c, acharG(w, pai.id), 1)!
+    expect(comDois.forca).toBeGreaterThan(comUm.forca)
   })
 })
 
