@@ -112,10 +112,11 @@ header h1 { margin: 0 0 10px; font-size: 1.2rem; }
 
 .quarto { fill: var(--superficie); }
 .viga { stroke: var(--madeira); stroke-width: 3; stroke-linecap: round; }
-.ramo { stroke: var(--fraco); stroke-width: 2; pointer-events: none; }
+.ramo { fill: none; stroke: var(--fraco); stroke-width: 2; stroke-linecap: round; pointer-events: none; }
 .ramo.vazio { stroke-dasharray: 3 5; }
 
-.pega-corpo { stroke: transparent; stroke-width: 18; cursor: grab; }
+/* sem preenchimento, só o traço grosso da curva pega o dedo */
+.pega-corpo { fill: none; stroke: transparent; stroke-width: 18; cursor: grab; pointer-events: stroke; }
 .pega { cursor: grab; }
 .garfo-mundo.movendo .pega, .garfo-mundo.movendo .pega-corpo { cursor: grabbing; }
 

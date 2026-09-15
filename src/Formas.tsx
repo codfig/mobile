@@ -28,6 +28,16 @@ export const Forma = ({ indice, x, y, r, classe }: { indice: number; x: number; 
   }
 }
 
+/**
+ * O ramo de um garfo, do anel até uma ponta. Sai do anel descendo a prumo e
+ * chega à ponta descendo a prumo, com a curva no meio; ponta bem embaixo do
+ * anel dá reta.
+ */
+export const curvaDoRamo = (x1: number, y1: number, x2: number, y2: number): string => {
+  const meio = (y1 + y2) / 2
+  return `M ${x1} ${y1} C ${x1} ${meio} ${x2} ${meio} ${x2} ${y2}`
+}
+
 /** Forma do não-terminal com o nome dele dentro. */
 export const NaoTerminal = ({
   indice,

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { regraDe, type Gramatica, type Token } from "./gramatica.js"
-import { Etiqueta, NaoTerminal } from "./Formas.jsx"
+import { curvaDoRamo, Etiqueta, NaoTerminal } from "./Formas.jsx"
 import {
   ajustar,
   dist,
@@ -267,17 +267,11 @@ export const Sala = ({
                 <g key={g.id} className={arrasto?.garfo === g.id ? "garfo-mundo movendo" : "garfo-mundo"}>
                   {regra.corpo.map((s, i) => {
                     const p = posPonta(mundo, cena, g, i)
+                    const d = curvaDoRamo(anel.x, anel.y, p.x, p.y)
                     return (
                       <g key={`r-${i}`}>
-                        <line x1={anel.x} y1={anel.y} x2={p.x} y2={p.y} className={s.tipo === "vazio" ? "ramo vazio" : "ramo"} />
-                        <line
-                          x1={anel.x}
-                          y1={anel.y}
-                          x2={p.x}
-                          y2={p.y}
-                          className="pega-corpo"
-                          onPointerDown={(e) => comecar(e, g, { _tag: "Corpo" })}
-                        />
+                        <path d={d} className={s.tipo === "vazio" ? "ramo vazio" : "ramo"} />
+                        <path d={d} className="pega-corpo" onPointerDown={(e) => comecar(e, g, { _tag: "Corpo" })} />
                       </g>
                     )
                   })}

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { textoDoSimbolo, type Gramatica, type Regra } from "./gramatica.js"
-import { Etiqueta, NaoTerminal } from "./Formas.jsx"
+import { curvaDoRamo, Etiqueta, NaoTerminal } from "./Formas.jsx"
 import { cenaDe, medidas, type Camera, type Ponto } from "./layout.js"
 import {
   assentar,
@@ -64,7 +64,7 @@ const MiniGarfo = ({ gramatica, regra }: { gramatica: Gramatica; regra: Regra })
     <svg viewBox={`0 0 ${largura} 60`} width={largura} height={60} className="miniatura" aria-hidden="true">
       {regra.corpo.map((s, i) => {
         const x = cx + (i - (n - 1) / 2) * passo
-        return <line key={`l${i}`} x1={cx} y1={15} x2={x} y2={42} className={s.tipo === "vazio" ? "ramo vazio" : "ramo"} />
+        return <path key={`l${i}`} d={curvaDoRamo(cx, 15, x, 42)} className={s.tipo === "vazio" ? "ramo vazio" : "ramo"} />
       })}
       {regra.corpo.map((s, i) => {
         const x = cx + (i - (n - 1) / 2) * passo
