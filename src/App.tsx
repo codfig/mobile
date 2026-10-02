@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { textoDoSimbolo, type Gramatica, type Regra } from "./gramatica.js"
+import { escreverBNF, lerProgramas, montarGramatica } from "./bnf.js"
+import { Editor, type Exemplo } from "./Editor.jsx"
+import { type Gramatica, type Regra } from "./gramatica.js"
 import { curvaDoRamo, Etiqueta, NaoTerminal } from "./Formas.jsx"
 import { cenaDe, medidas, type Camera, type Ponto } from "./layout.js"
 import {
@@ -16,7 +18,7 @@ import {
   type Parte,
   type Veredito
 } from "./mundo.js"
-import { ARITMETICA, TRILHAS } from "./niveis.js"
+import { ARITMETICA, TRILHAS, trilhaDe, type Trilha } from "./niveis.js"
 import { derivacoes } from "./reconhecer.js"
 import { Sala } from "./Sala.jsx"
 
@@ -49,15 +51,28 @@ const recadoDoVeredito = (v: Veredito): Recado => {
   }
 }
 
-/** A gramática como se escreve no quadro: uma linha por não-terminal. */
-const linhasDaGramatica = (g: Gramatica): ReadonlyArray<string> =>
-  g.naoTerminais.map(
-    (nt) =>
-      `${nt} → ${g.regras
-        .filter((r) => r.cabeca === nt)
-        .map((r) => r.corpo.map(textoDoSimbolo).join(" "))
-        .join("  |  ")}`
-  )
+/**
+ * O editor abre com uma gramática que não é trilha nenhuma — 0ⁿ1ⁿ, prima da
+ * primeira —, para que a primeira coisa a fazer nele seja mexer, não encarar
+ * uma folha em branco.
+ */
+const BNF_INICIAL = `# Uma produção por linha; os símbolos vão separados por espaço.
+# Não precisa da tecla → : vale -> ou ::= . Nem da ε : vale epsilon,
+# ou nada depois da seta.
+S → 0 S 1
+S → ε`
+
+const PROGRAMAS_INICIAIS = `0 1
+0 0 1 1
+0 0 1
+0 1 0 1`
+
+/** Cada trilha do jogo serve de ponto de partida: o editor abre com o texto dela. */
+const EXEMPLOS: ReadonlyArray<Exemplo> = TRILHAS.map((t) => ({
+  nome: t.gramatica.nome,
+  bnf: escreverBNF(t.gramatica),
+  programas: t.niveis.map((n) => n.programa).join("\n")
+}))
 
 const MiniGarfo = ({ gramatica, regra }: { gramatica: Gramatica; regra: Regra }) => {
   const n = regra.corpo.length
@@ -93,13 +108,23 @@ export const App = () => {
   const [iTrilha, setITrilha] = useState(Math.max(0, TRILHAS.findIndex((t) => t.gramatica === ARITMETICA)))
   const [iNivel, setINivel] = useState(3)
   const [mundo, setMundo] = useState<Mundo>(mundoVazio)
+  const [bnf, setBnf] = useState(BNF_INICIAL)
+  const [programasEscritos, setProgramasEscritos] = useState(PROGRAMAS_INICIAIS)
+  /** A trilha que veio do editor, se já foi montada. Fica depois das do código. */
+  const [minha, setMinha] = useState<Trilha | null>(null)
   const [camera, setCamera] = useState<Camera | null>(null)
   const [recado, setRecado] = useState<Recado | null>(null)
   const [gravidade, setGravidade] = useState(false)
 
-  const trilha = TRILHAS[iTrilha] ?? TRILHAS[0]!
-  const gramatica = trilha.gramatica
-  const nivel = trilha.niveis[iNivel] ?? trilha.niveis[0]!
+  const montagem = useMemo(() => montarGramatica(bnf), [bnf])
+  const leituraDosProgramas = useMemo(() => lerProgramas(programasEscritos), [programasEscritos])
+
+  // Na aba do editor a trilha pode ainda não existir; as contas seguem por uma
+  // qualquer, e a sala é que não se desenha.
+  const trilha: Trilha | null = iTrilha < TRILHAS.length ? TRILHAS[iTrilha]! : minha
+  const viva = trilha ?? TRILHAS[0]!
+  const gramatica = viva.gramatica
+  const nivel = viva.niveis[iNivel] ?? viva.niveis[0]!
   const m = useMemo(() => medidas(nivel.tokens.length), [nivel])
   const cena = useMemo(() => cenaDe(m, nivel.tokens.length), [m, nivel])
 
@@ -115,6 +140,12 @@ export const App = () => {
     setCamera(null)
     setRecado(null)
     setIResposta(0)
+  }
+
+  const montar = () => {
+    if (montagem.gramatica === null || leituraDosProgramas.erros.length > 0) return
+    setMinha(trilhaDe(montagem.gramatica, leituraDosProgramas.programas))
+    irPara(TRILHAS.length, 0)
   }
 
   const trazer = (regra: Regra) => {
@@ -163,8 +194,25 @@ export const App = () => {
   }, [gravidade, mundo, cena])
   const aoMudarCamera = useCallback((c: Camera) => setCamera(c), [])
 
-  return (
-    <main className="app">
+  const editor = (
+    <Editor
+      bnf={bnf}
+      programas={programasEscritos}
+      montagem={montagem}
+      errosDosProgramas={leituraDosProgramas.erros}
+      exemplos={EXEMPLOS}
+      aoMudarBnf={setBnf}
+      aoMudarProgramas={setProgramasEscritos}
+      aoUsarExemplo={(e) => {
+        setBnf(e.bnf)
+        setProgramasEscritos(e.programas)
+      }}
+      aoMontar={montar}
+    />
+  )
+
+  const cabecalho = (
+    <>
       <header>
         <h1>Pendura a árvore</h1>
       </header>
@@ -175,9 +223,41 @@ export const App = () => {
             {t.gramatica.nome}
           </button>
         ))}
+        <button
+          type="button"
+          className={iTrilha === TRILHAS.length ? "chip ativo" : "chip"}
+          onClick={() => irPara(TRILHAS.length, 0)}
+        >
+          Sua gramática
+        </button>
       </nav>
+    </>
+  )
 
-      <pre className="gramatica">{linhasDaGramatica(gramatica).join("\n")}</pre>
+  // Enquanto a trilha do editor não foi montada, a aba dele é a página inteira:
+  // não há sala para desenhar embaixo.
+  if (trilha === null)
+    return (
+      <main className="app">
+        {cabecalho}
+        <section className="editor-caixa" aria-label="Escrever a gramática">
+          {editor}
+        </section>
+      </main>
+    )
+
+  return (
+    <main className="app">
+      {cabecalho}
+
+      {iTrilha === TRILHAS.length && (
+        <details className="editor-caixa">
+          <summary>Escrever a gramática</summary>
+          {editor}
+        </details>
+      )}
+
+      <pre className="gramatica">{escreverBNF(gramatica)}</pre>
 
       <nav className="niveis" aria-label="Programa">
         {trilha.niveis.map((n, i) => (

@@ -16,7 +16,8 @@ const nivel = (g: Gramatica, programa: string): Nivel => {
   return { id: `${g.id}:${programa}`, programa, tokens, penduravel: reconhece(g, tokens) }
 }
 
-const trilha = (g: Gramatica, programas: ReadonlyArray<string>): Trilha => ({
+/** Uma gramática e seus programas viram uma trilha de salas — venha ela do código ou do editor. */
+export const trilhaDe = (g: Gramatica, programas: ReadonlyArray<string>): Trilha => ({
   gramatica: g,
   niveis: programas.map((p) => nivel(g, p))
 })
@@ -92,9 +93,9 @@ export const ALGOL = definir("algol", "ALGOL", [
  * marca: descobrir que um deles não pendura faz parte do exercício.
  */
 export const TRILHAS: ReadonlyArray<Trilha> = [
-  trilha(ANBN, ["a b", "a a b b", "a a a b b b", "a a b", "a b a b"]),
-  trilha(PARENTESES, ["( )", "( ) ( )", "( ( ) )", ") (", "( ( ) ( ) )", "( ( )"]),
-  trilha(LISP, [
+  trilhaDe(ANBN, ["a b", "a a b b", "a a a b b b", "a a b", "a b a b"]),
+  trilhaDe(PARENTESES, ["( )", "( ) ( )", "( ( ) )", ") (", "( ( ) ( ) )", "( ( )"]),
+  trilhaDe(LISP, [
     "x",
     "( )",
     "( car x )",
@@ -106,7 +107,7 @@ export const TRILHAS: ReadonlyArray<Trilha> = [
     "( ) )",
     "( define ( sq x ) ( * x x ) )"
   ]),
-  trilha(ARITMETICA, [
+  trilhaDe(ARITMETICA, [
     "2",
     "2 + 3",
     "2 * 3",
@@ -118,7 +119,7 @@ export const TRILHAS: ReadonlyArray<Trilha> = [
     "( 1 + 2 ) * ( 3 + 4 )",
     "( 2 + 3"
   ]),
-  trilha(LET, [
+  trilhaDe(LET, [
     "5",
     "x",
     "- ( x , 1 )",
@@ -131,7 +132,7 @@ export const TRILHAS: ReadonlyArray<Trilha> = [
     "if x then 1",
     "let x = 3 in let y = - ( x , 1 ) in - ( x , y )"
   ]),
-  trilha(ALGOL, [
+  trilhaDe(ALGOL, [
     "x := 1",
     "begin x := 1 end",
     "if a then x := 1",

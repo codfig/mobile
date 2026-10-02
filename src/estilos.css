@@ -287,3 +287,80 @@ header h1 { margin: 0 0 10px; font-size: 1.2rem; }
 .principal { border: none; background: var(--destaque); color: #fff; }
 .secundaria { border: 1px solid var(--borda); background: var(--superficie); color: var(--texto); font-weight: 500; }
 .secundaria:disabled { opacity: 0.45; cursor: default; }
+
+/* ---- o editor de gramática ---- */
+
+.editor-caixa {
+  margin: 10px 0 0;
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  background: var(--superficie);
+  padding: 12px;
+}
+details.editor-caixa { padding: 0; }
+details.editor-caixa > summary {
+  padding: 12px;
+  color: var(--fraco);
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+details.editor-caixa[open] > summary { border-bottom: 1px solid var(--borda); }
+details.editor-caixa > .editor { padding: 12px; }
+
+.editor label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--texto);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.editor label + textarea { margin-bottom: 12px; }
+.editor label small { display: block; font-weight: 400; color: var(--fraco); font-size: 0.78rem; }
+
+.bnf {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--borda);
+  border-radius: 10px;
+  background: var(--fundo);
+  color: var(--texto);
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+.bnf:focus-visible { outline: 2px solid var(--destaque); outline-offset: 1px; }
+
+.queixas { margin: 0 0 10px; padding-left: 18px; font-size: 0.86rem; }
+.queixas li { margin: 3px 0; }
+.queixas.ruim { color: var(--ruim); }
+.queixas.neutro { color: var(--fraco); }
+
+.categorias-token { margin: 0 0 10px; color: var(--fraco); font-size: 0.82rem; }
+.categorias-token .categoria {
+  display: inline-block;
+  margin: 2px 4px 0 0;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  font-size: 0.82rem;
+}
+
+.acoes-editor { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.acoes-editor .principal { flex: 0 0 auto; padding: 0 16px; }
+.acoes-editor .principal:disabled { opacity: 0.45; cursor: default; }
+
+.teclas { display: flex; align-items: center; gap: 6px; margin: -6px 0 12px; color: var(--fraco); font-size: 0.78rem; }
+.teclas button {
+  min-width: 34px;
+  height: 34px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  background: var(--superficie);
+  color: var(--texto);
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.teclas button:hover { border-color: var(--destaque); }
